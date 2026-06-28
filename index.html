@@ -3,17 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Mobile Photo Booth Studio</title>
+    <title>Smart Mobile Photo Booth Studio Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
-        body { background-color: #111827; color: white; overflow-x: hidden; touch-action: manipulation; }
-        #camera-container { position: relative; width: 100%; height: 50vh; background: #000; overflow: hidden; border-radius: 0 0 24px 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        body { background-color: #000000; color: white; overflow-x: hidden; touch-action: manipulation; }
         
-        #camera-feed { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+        #camera-container { 
+            position: relative; 
+            flex-grow: 1; 
+            width: 100%; 
+            min-height: 0; 
+            background: #111827; 
+            overflow: hidden; 
+            z-index: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+        }
         
-        .flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; transition: opacity 0.2s ease-out; z-index: 50; }
+        #camera-feed { 
+            position: relative; 
+            z-index: 10;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            margin: auto;
+        }
+        
+        .feed-full { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            border-radius: 0; 
+            border: none; 
+            box-shadow: none; 
+        }
+        .feed-3-4 { 
+            width: 100%; 
+            height: 100%; 
+            max-width: 95%; 
+            max-height: 95%; 
+            aspect-ratio: 3/4; 
+            object-fit: cover; 
+            border-radius: 16px; 
+            border: 2px solid #4b5563; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8); 
+        }
+        .feed-1-1 { 
+            width: 100%; 
+            height: 100%; 
+            max-width: 95%; 
+            max-height: 95%; 
+            aspect-ratio: 1/1; 
+            object-fit: cover; 
+            border-radius: 16px; 
+            border: 2px solid #4b5563; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8); 
+        }
+        
+        .flash-overlay { position: absolute; inset: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; transition: opacity 0.2s ease-out; z-index: 50; }
         .flash-active { opacity: 1 !important; }
         
         @keyframes popIn {
@@ -41,7 +89,6 @@
         }
         .downloaded-badge { animation: successPop 0.3s ease-out forwards; }
 
-        /* Style Drag and Drop */
         .rearrange-item { transition: transform 0.2s, box-shadow 0.2s; cursor: grab; }
         .rearrange-item:active { cursor: grabbing; }
         .sortable-ghost { opacity: 0.4; transform: scale(0.95); background-color: #374151; border-color: #facc15 !important; }
@@ -53,67 +100,80 @@
     <div id="tutorial-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300">
         <div class="bg-gray-900 border border-gray-700 p-6 rounded-2xl w-11/12 max-w-sm shadow-2xl text-center transform scale-100 transition-transform">
             <h2 class="text-2xl font-bold text-blue-400 mb-2">Panduan Cepat</h2>
-            <p class="text-gray-400 text-sm mb-5">Smart Studio Booth di Genggamanmu!</p>
+            <p class="text-gray-400 text-sm mb-5">Smart Studio Booth Pro</p>
             <div class="space-y-4 text-left text-sm text-gray-200 mb-6">
-                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-hand-pointer w-4 text-center"></i></div> 1. Pilih mode jepret (Auto/Manual).</div>
-                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-camera w-4 text-center"></i></div> 2. Jepret & <b>cek/hapus foto dari preview.</b></div>
-                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-arrows-alt w-4 text-center"></i></div> 3. <b>Seret & Lepas (Drag)</b> foto untuk mengatur posisi.</div>
-                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-download w-4 text-center"></i></div> 4. Simpan foto & video ke galeri.</div>
+                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-bluetooth w-4 text-center"></i></div> 1. Gunakan <b>Remot Bluetooth</b> (Volume/Enter) untuk jepret.</div>
+                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-expand w-4 text-center"></i></div> 2. Pilih Rasio Layar (Full/3:4/1:1) dan Mode Timer.</div>
+                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-arrows-alt w-4 text-center"></i></div> 3. <b>Seret (Drag)</b> foto di hasil untuk ganti posisi.</div>
+                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-download w-4 text-center"></i></div> 4. Simpan hasil Resolusi Tinggi ke galeri.</div>
             </div>
             <button id="btn-close-tutorial" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-transform">Mengerti, Mulai!</button>
         </div>
     </div>
 
-    <div id="view-camera" class="flex-1 flex flex-col w-full h-full">
-        <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
-            <h1 class="text-xl font-bold tracking-wider">STUDIO<span class="text-blue-500">PRO</span></h1>
-            <div class="flex gap-4">
-                <button id="btn-flash" class="text-white bg-gray-800/60 p-3 rounded-full backdrop-blur-md transition-colors duration-300"><i class="fas fa-bolt"></i></button>
-                <button id="btn-switch" class="text-white bg-gray-800/60 p-3 rounded-full backdrop-blur-md"><i class="fas fa-camera-rotate"></i></button>
+    <div id="view-camera" class="relative w-full h-[100dvh] flex flex-col bg-black overflow-hidden">
+        
+        <div class="w-full py-2.5 px-4 flex justify-between items-center z-20 bg-gray-950 shrink-0 border-b border-gray-800 shadow-md">
+            <h1 class="text-lg font-bold tracking-wider drop-shadow-md">STUDIO<span class="text-blue-500">PRO</span></h1>
+            <div class="flex gap-2">
+                <button id="btn-ratio" class="text-white bg-gray-800 w-10 h-10 rounded-full transition-colors duration-300 shadow-lg text-[10px] font-bold tracking-tighter">FULL</button>
+                <button id="btn-flash" class="text-white bg-gray-800 w-10 h-10 rounded-full transition-colors duration-300 shadow-lg flex items-center justify-center"><i class="fas fa-bolt"></i></button>
+                <button id="btn-switch" class="text-white bg-gray-800 w-10 h-10 rounded-full shadow-lg flex items-center justify-center"><i class="fas fa-camera-rotate"></i></button>
             </div>
         </div>
 
         <div id="camera-container">
-            <video id="camera-feed" autoplay playsinline muted></video>
+            <video id="camera-feed" autoplay playsinline muted class="feed-full"></video>
+            
             <div class="flash-overlay" id="flash-effect"></div>
             
-            <div id="countdown-display" class="hidden absolute inset-0 flex items-center justify-center text-[150px] font-extrabold text-white z-40 drop-shadow-2xl"></div>
+            <div id="countdown-display" class="hidden absolute inset-0 flex items-center justify-center text-[180px] font-extrabold text-white z-40 drop-shadow-2xl"></div>
             
-            <div id="recording-indicator" class="hidden absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-5 py-2 rounded-full text-sm font-bold flex items-center gap-3 shadow-lg z-20">
-                <div class="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+            <div id="recording-indicator" class="hidden absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg z-50">
+                <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                 Action! (3s)
             </div>
         </div>
 
-        <div class="flex-1 p-3 flex flex-col gap-3 overflow-y-auto">
-            <div class="flex justify-center gap-3 w-full max-w-sm mx-auto mb-1 shrink-0">
-                <button id="mode-manual" class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold shadow-lg border border-blue-400 transition-colors">Manual Shot</button>
-                <button id="mode-auto" class="flex-1 bg-gray-800 text-gray-400 py-2 rounded-lg text-sm font-bold shadow-lg border border-gray-600 transition-colors">Auto (Timer)</button>
+        <div class="relative w-full pb-3 pt-2 flex flex-col gap-2 z-20 bg-gray-950 px-3 shrink-0 border-t border-gray-800 shadow-[0_-10px_20px_rgba(0,0,0,0.6)]">
+            
+            <div class="flex justify-center gap-2 w-full max-w-sm mx-auto">
+                <select id="timer-duration" class="w-full bg-gray-800 text-white py-1.5 px-3 rounded-lg text-sm font-bold shadow-lg border border-gray-700 outline-none focus:border-blue-500 transition-colors cursor-pointer text-center" style="text-align-last: center;">
+                    <option value="3">Waktu Timer: 3 Detik</option>
+                    <option value="5">Waktu Timer: 5 Detik</option>
+                    <option value="10">Waktu Timer: 10 Detik</option>
+                    <option value="15">Waktu Timer: 15 Detik</option>
+                </select>
             </div>
 
-            <div class="flex flex-col items-center gap-2 shrink-0">
-                <p id="counter-text" class="text-lg font-bold">Grid: 0 / 6</p>
+            <div class="flex justify-center gap-2 w-full max-w-sm mx-auto mb-0.5">
+                <button id="mode-manual" class="flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-sm font-bold shadow-lg border border-blue-400 transition-colors">Manual Shot</button>
+                <button id="mode-auto" class="flex-1 bg-gray-800 text-gray-400 py-1.5 rounded-lg text-sm font-bold shadow-lg border border-gray-700 transition-colors">Auto (Berurutan)</button>
+            </div>
+
+            <div class="flex flex-col items-center gap-1">
+                <p id="counter-text" class="text-xs font-bold bg-black/50 px-3 py-0.5 rounded-full text-gray-300">Grid: 0 / 6</p>
                 
-                <button id="btn-capture" class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-[0_0_0_4px_rgba(59,130,246,0.5)] active:scale-90 transition-transform disabled:opacity-50 disabled:scale-100">
-                    <div class="w-12 h-12 bg-blue-500 rounded-full border-2 border-white"></div>
+                <button id="btn-capture" class="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-[0_0_0_4px_rgba(59,130,246,0.6)] active:scale-90 transition-transform disabled:opacity-50 disabled:scale-100 my-0.5">
+                    <div class="w-10 h-10 bg-blue-500 rounded-full border-2 border-white"></div>
                 </button>
 
-                <button id="btn-finish-capture" class="hidden w-full max-w-sm bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl shadow-[0_0_15px_rgba(22,163,74,0.4)] transition-all animate-pulse flex justify-center items-center gap-2 mt-1">
+                <button id="btn-finish-capture" class="hidden w-full max-w-sm bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded-xl shadow-[0_0_15px_rgba(22,163,74,0.4)] transition-all animate-pulse flex justify-center items-center gap-2 my-0.5">
                     <i class="fas fa-check-circle"></i> Selesai & Lihat Hasil
                 </button>
                 
-                <p id="instruction-text" class="text-xs text-gray-400 text-center leading-tight">Pilih mode lalu jepret. Rekam 3s</p>
+                <p id="instruction-text" class="text-[10px] text-gray-400 font-medium text-center leading-tight drop-shadow-md">Pilih mode lalu jepret. Rekam 3s</p>
             </div>
 
-            <div class="w-full max-w-sm mx-auto relative min-h-[160px] bg-gray-800/50 rounded-xl border border-gray-700 p-2 shrink-0 mt-1 shadow-inner">
-                <p class="text-[11px] text-gray-300 font-semibold text-center mb-1 absolute top-2 left-0 right-0 z-0">Preview Hasil (Ketuk ✖ untuk hapus/ulang)</p>
-                <div id="capture-gallery" class="flex overflow-x-auto gap-3 snap-x w-full h-full relative z-10 pt-7 pb-2 px-1">
-                    </div>
+            <div class="w-full max-w-sm mx-auto relative min-h-[105px] bg-gray-950 rounded-xl border border-gray-800 p-1.5 shadow-inner mt-0.5">
+                <p class="text-[10px] text-gray-400 font-semibold text-center mb-0.5 absolute top-1.5 left-0 right-0 z-0">Preview Hasil (Ketuk ✖ untuk hapus)</p>
+                <div id="capture-gallery" class="flex overflow-x-auto gap-2 snap-x w-full h-full relative z-10 pt-5 pb-1 px-1">
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="view-result" class="hidden flex-1 flex flex-col w-full h-full p-5 bg-gray-900 overflow-y-auto">
+    <div id="view-result" class="hidden flex-col w-full min-h-screen p-5 bg-gray-900 overflow-y-auto">
         <h2 class="text-2xl font-bold text-center mb-4 mt-2">Hasil Studio</h2>
         
         <div id="theme-container" class="w-full max-w-sm mx-auto mb-2 transition-opacity duration-300 shrink-0">
@@ -123,7 +183,7 @@
         
         <div id="processing-state" class="flex flex-col items-center justify-center flex-1 py-10 hidden shrink-0">
             <div class="loader mb-4"></div>
-            <p class="text-lg font-semibold animate-pulse text-center">Memproses Studio...<br><span class="text-sm text-gray-400">Harap tunggu sebentar</span></p>
+            <p class="text-lg font-semibold animate-pulse text-center">Memproses Studio High-Res...<br><span class="text-sm text-gray-400">Harap tunggu sebentar</span></p>
         </div>
 
         <div id="final-state" class="hidden flex-col items-center flex-1 pb-10">
@@ -135,32 +195,25 @@
             <div class="w-full max-w-sm mb-5 bg-gray-800 p-3 rounded-xl border border-gray-700 shadow-lg shrink-0">
                 <h3 class="text-sm font-bold text-yellow-400 mb-2 text-center"><i class="fas fa-hand-rock"></i> Tata Letak Posisi</h3>
                 <p class="text-[11px] text-gray-300 text-center mb-3"><b>Seret & Lepas (Drag & Drop)</b> foto di bawah ini untuk memindahkan posisinya.</p>
-                <div id="rearrange-gallery" class="grid grid-cols-3 gap-2">
-                    </div>
+                <div id="rearrange-gallery" class="grid grid-cols-3 gap-2"></div>
             </div>
 
             <canvas id="preview-canvas" style="aspect-ratio: 2/3;" class="w-full max-w-sm bg-black rounded-xl shadow-2xl mb-6 object-contain border-4 border-gray-800 shrink-0"></canvas>
             
             <div id="video-wrapper" class="hidden w-full max-w-sm relative mb-6 shrink-0">
-                <video id="preview-video" style="aspect-ratio: 2/3; display: none;" class="w-full bg-black rounded-xl shadow-2xl object-contain border-4 border-gray-800" autoplay loop muted playsinline></video>
-                <div id="video-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-xl z-10">
-                    <div class="loader mb-3 border-t-emerald-500"></div>
-                    <span class="text-sm font-bold text-emerald-400 animate-pulse">Menyiapkan Preview...</span>
-                </div>
             </div>
             
             <div class="w-full max-w-sm flex flex-col gap-3 shrink-0">
                 <button id="btn-download-photo" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg flex justify-center items-center gap-2 transition-colors duration-300">
-                    <i class="fas fa-image"></i> Simpan Strip Foto
+                    <i class="fas fa-image"></i> Simpan Foto High-Res
                 </button>
                 <button id="btn-download-video" class="hidden w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-lg justify-center items-center gap-2 transition-colors duration-300">
-                    <i class="fas fa-video"></i> Simpan Video Slow-Mo
+                    <i class="fas fa-video"></i> Simpan Video HD
                 </button>
 
                 <div class="w-full mt-2 p-4 bg-gray-800 rounded-xl border border-gray-700">
                     <h3 class="text-sm font-bold text-gray-300 mb-3 text-center">Pilih & Unduh Foto Satuan</h3>
-                    <div id="individual-photos-container" class="grid grid-cols-3 gap-2 mb-4">
-                    </div>
+                    <div id="individual-photos-container" class="grid grid-cols-3 gap-2 mb-4"></div>
                     <button id="btn-download-selected" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl shadow-lg flex justify-center items-center gap-2 transition-colors opacity-50 cursor-not-allowed duration-300" disabled>
                         <i class="fas fa-download"></i> Unduh Terpilih (<span id="selected-count">0</span>)
                     </button>
@@ -182,8 +235,32 @@
         let mediaRecorder, recordedChunks = [], currentVideoUrl = null;
         let isVideoReady = false;
         let currentRenderId = 0;
-
         let selectedIndividualPhotos = new Set();
+
+        const videoElement = document.getElementById('camera-feed'), flashEffect = document.getElementById('flash-effect');
+        const btnCapture = document.getElementById('btn-capture'), counterText = document.getElementById('counter-text');
+        const instructionText = document.getElementById('instruction-text'), recordingIndicator = document.getElementById('recording-indicator');
+        const countdownDisplay = document.getElementById('countdown-display'), previewCanvas = document.getElementById('preview-canvas');
+        const themeContainer = document.getElementById('theme-container'), videoWrapper = document.getElementById('video-wrapper');
+        const togglePhoto = document.getElementById('toggle-photo'), toggleVideo = document.getElementById('toggle-video');
+        const btnDownloadPhoto = document.getElementById('btn-download-photo'), btnDownloadVideo = document.getElementById('btn-download-video');
+        const modeManualBtn = document.getElementById('mode-manual'), modeAutoBtn = document.getElementById('mode-auto');
+        const btnFinishCapture = document.getElementById('btn-finish-capture'), btnFlash = document.getElementById('btn-flash');
+        const btnRatio = document.getElementById('btn-ratio');
+
+        const aspectRatios = [
+            { label: 'FULL', className: 'feed-full' },
+            { label: '3:4', className: 'feed-3-4' },
+            { label: '1:1', className: 'feed-1-1' }
+        ];
+        let currentRatioIndex = 0;
+
+        btnRatio.onclick = () => {
+            videoElement.classList.remove(aspectRatios[currentRatioIndex].className);
+            currentRatioIndex = (currentRatioIndex + 1) % aspectRatios.length;
+            videoElement.classList.add(aspectRatios[currentRatioIndex].className);
+            btnRatio.innerText = aspectRatios[currentRatioIndex].label;
+        };
 
         function base64ToBlob(base64Data, contentType = 'image/jpeg') {
             const byteCharacters = atob(base64Data.split(',')[1]);
@@ -194,8 +271,7 @@
                 for (let i = 0; i < slice.length; i++) {
                     byteNumbers[i] = slice.charCodeAt(i);
                 }
-                const byteArray = new Uint8Array(byteNumbers);
-                byteArrays.push(byteArray);
+                byteArrays.push(new Uint8Array(byteNumbers));
             }
             return new Blob(byteArrays, { type: contentType });
         }
@@ -206,14 +282,9 @@
             a.style.display = 'none';
             a.href = blobUrl;
             a.download = filename;
-            a.target = '_blank';
             document.body.appendChild(a);
             a.click();
-            
-            setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(blobUrl);
-            }, 1000);
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(blobUrl); }, 1000);
         }
 
         const themes = [
@@ -236,19 +307,6 @@
         ];
         let currentTheme = themes[0];
 
-        const videoElement = document.getElementById('camera-feed'), flashEffect = document.getElementById('flash-effect');
-        const btnCapture = document.getElementById('btn-capture'), counterText = document.getElementById('counter-text');
-        const instructionText = document.getElementById('instruction-text'), recordingIndicator = document.getElementById('recording-indicator');
-        const countdownDisplay = document.getElementById('countdown-display'), previewCanvas = document.getElementById('preview-canvas');
-        const previewVideo = document.getElementById('preview-video'), themeContainer = document.getElementById('theme-container');
-        const videoWrapper = document.getElementById('video-wrapper'), videoLoadingState = document.getElementById('video-loading');
-        
-        const togglePhoto = document.getElementById('toggle-photo'), toggleVideo = document.getElementById('toggle-video');
-        const btnDownloadPhoto = document.getElementById('btn-download-photo'), btnDownloadVideo = document.getElementById('btn-download-video');
-        const modeManualBtn = document.getElementById('mode-manual'), modeAutoBtn = document.getElementById('mode-auto');
-        const btnFinishCapture = document.getElementById('btn-finish-capture');
-        const btnFlash = document.getElementById('btn-flash');
-
         document.getElementById('btn-close-tutorial').onclick = function() {
             const modal = document.getElementById('tutorial-modal');
             modal.style.opacity = '0';
@@ -256,16 +314,31 @@
             initCamera();
         };
 
+        document.addEventListener('keydown', (e) => {
+            const triggerKeys = ['Enter', ' ', 'VolumeUp', 'VolumeDown', 'ArrowUp', 'ArrowDown', 'AudioVolumeUp', 'AudioVolumeDown'];
+            if (triggerKeys.includes(e.key) || e.keyCode === 13 || e.keyCode === 32 || e.keyCode === 38 || e.keyCode === 40) {
+                const cameraView = document.getElementById('view-camera');
+                if (!cameraView.classList.contains('hidden')) {
+                    if (!btnCapture.disabled && !btnCapture.classList.contains('hidden')) {
+                        e.preventDefault(); btnCapture.click();
+                    } else if (!btnFinishCapture.classList.contains('hidden')) {
+                        e.preventDefault(); btnFinishCapture.click();
+                    }
+                }
+            }
+        });
+
+        // Diperbarui agar padding tombol selaras dengan desain CSS HTML di atas
         modeManualBtn.onclick = () => {
             isAutoMode = false;
-            modeManualBtn.className = "flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold shadow-lg border border-blue-400 transition-colors";
-            modeAutoBtn.className = "flex-1 bg-gray-800 text-gray-400 py-2 rounded-lg text-sm font-bold shadow-lg border border-gray-600 transition-colors";
+            modeManualBtn.className = "flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-sm font-bold shadow-lg border border-blue-400 transition-colors";
+            modeAutoBtn.className = "flex-1 bg-gray-800 text-gray-400 py-1.5 rounded-lg text-sm font-bold shadow-lg border border-gray-700 transition-colors";
         };
 
         modeAutoBtn.onclick = () => {
             isAutoMode = true;
-            modeAutoBtn.className = "flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold shadow-lg border border-blue-400 transition-colors";
-            modeManualBtn.className = "flex-1 bg-gray-800 text-gray-400 py-2 rounded-lg text-sm font-bold shadow-lg border border-gray-600 transition-colors";
+            modeAutoBtn.className = "flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-sm font-bold shadow-lg border border-blue-400 transition-colors";
+            modeManualBtn.className = "flex-1 bg-gray-800 text-gray-400 py-1.5 rounded-lg text-sm font-bold shadow-lg border border-gray-700 transition-colors";
         };
 
         async function initCamera() {
@@ -273,17 +346,18 @@
             if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); videoElement.srcObject = null; }
             try {
                 currentStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: isFrontCamera ? 'user' : 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false 
+                    video: { 
+                        facingMode: isFrontCamera ? 'user' : 'environment', 
+                        width: { ideal: 1080 }, 
+                        height: { ideal: 1920 } 
+                    }, 
+                    audio: false 
                 });
                 videoElement.srcObject = currentStream; videoTrack = currentStream.getVideoTracks()[0];
                 videoElement.style.transform = isFrontCamera ? 'scaleX(-1)' : 'scaleX(1)';
                 await videoElement.play().catch(e => console.warn(e));
                 btnCapture.disabled = false;
-                
-                // Reset flash status saat ganti kamera
-                isFlashOn = false;
-                btnFlash.classList.remove('text-yellow-400');
-                btnFlash.classList.add('text-white');
+                isFlashOn = false; btnFlash.classList.remove('text-yellow-400'); btnFlash.classList.add('text-white');
             } catch (err) { alert("Izin kamera diperlukan untuk menggunakan Studio ini."); }
         }
 
@@ -304,9 +378,7 @@
                 btn.onclick = async () => { 
                     if (isRendering || currentTheme.id === theme.id) return;
                     currentTheme = theme; renderThemes(); 
-                    if (photos.length >= maxPhotos) {
-                        await reRenderResults();
-                    }
+                    if (photos.length >= maxPhotos) await reRenderResults();
                 };
                 container.appendChild(btn);
             });
@@ -314,15 +386,11 @@
 
         document.getElementById('btn-switch').onclick = () => { isFrontCamera = !isFrontCamera; initCamera(); };
         
+        // Diperbarui agar lebar tombol sinkron dengan perubahan ukuran CSS di Header (w-10 h-10)
         btnFlash.onclick = () => {
             isFlashOn = !isFlashOn;
-            if (isFlashOn) {
-                btnFlash.classList.remove('text-white');
-                btnFlash.classList.add('text-yellow-400');
-            } else {
-                btnFlash.classList.remove('text-yellow-400');
-                btnFlash.classList.add('text-white');
-            }
+            btnFlash.className = isFlashOn ? "text-yellow-400 bg-gray-800 w-10 h-10 rounded-full transition-colors duration-300 shadow-lg flex items-center justify-center" 
+                                           : "text-white bg-gray-800 w-10 h-10 rounded-full transition-colors duration-300 shadow-lg flex items-center justify-center";
         };
 
         togglePhoto.onclick = () => {
@@ -343,21 +411,17 @@
 
         async function setTorchStatus(isOn) {
             if (videoTrack) { 
-                try { 
-                    const cap = videoTrack.getCapabilities(); 
-                    if (cap && cap.torch) {
-                        await videoTrack.applyConstraints({ advanced: [{ torch: isOn }] }); 
-                    }
-                } catch (e) {
-                    console.warn("Torch API error or not supported", e);
-                } 
+                try { const cap = videoTrack.getCapabilities(); if (cap && cap.torch) await videoTrack.applyConstraints({ advanced: [{ torch: isOn }] }); } 
+                catch (e) {} 
             }
         }
 
         async function runCountdown() {
+            let timerVal = parseInt(document.getElementById('timer-duration').value);
             countdownDisplay.classList.remove('hidden');
-            for (let i = 3; i > 0; i--) {
-                countdownDisplay.innerText = i; countdownDisplay.classList.remove('countdown-anim'); void countdownDisplay.offsetWidth; countdownDisplay.classList.add('countdown-anim');
+            for (let i = timerVal; i > 0; i--) {
+                countdownDisplay.innerText = i; 
+                countdownDisplay.classList.remove('countdown-anim'); void countdownDisplay.offsetWidth; countdownDisplay.classList.add('countdown-anim');
                 await new Promise(r => setTimeout(r, 1000));
             }
             countdownDisplay.classList.add('hidden');
@@ -366,56 +430,39 @@
         function updateCaptureGallery() {
             const container = document.getElementById('capture-gallery');
             container.innerHTML = '';
-            
             photos.forEach((src, idx) => {
                 const wrap = document.createElement('div');
-                wrap.className = 'relative flex-shrink-0 w-[90px] h-[135px] rounded-lg overflow-hidden border-2 border-gray-500 snap-center animate-[popIn_0.3s_ease-out] shadow-[0_4px_10px_rgba(0,0,0,0.5)]';
-                
-                const img = document.createElement('img');
-                img.src = src; 
-                img.className = 'w-full h-full object-cover';
-                
+                wrap.className = 'relative flex-shrink-0 w-[60px] h-[90px] rounded-lg overflow-hidden border border-gray-600 snap-center animate-[popIn_0.3s_ease-out] shadow-md bg-black';
+                const img = document.createElement('img'); img.src = src; img.className = 'w-full h-full object-cover';
                 const delBtn = document.createElement('button');
-                delBtn.className = 'absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-[12px] shadow-lg hover:bg-red-500 active:scale-90 transition-transform z-20';
+                delBtn.className = 'absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] shadow-lg hover:bg-red-500 active:scale-90 transition-transform z-20';
                 delBtn.innerHTML = '<i class="fas fa-times"></i>';
                 delBtn.onclick = () => removePhotoFromCapture(idx);
-
                 const num = document.createElement('div');
-                num.className = 'absolute bottom-1 left-1 bg-black/70 text-white text-[12px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm z-20';
+                num.className = 'absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[9px] font-bold px-1 rounded-sm backdrop-blur-sm z-20';
                 num.innerText = idx + 1;
-                
-                wrap.appendChild(img); 
-                wrap.appendChild(delBtn);
-                wrap.appendChild(num);
-                container.appendChild(wrap);
+                wrap.appendChild(img); wrap.appendChild(delBtn); wrap.appendChild(num); container.appendChild(wrap);
             });
-
             container.scrollLeft = container.scrollWidth;
 
             if(photos.length >= maxPhotos) {
-                btnCapture.classList.add('hidden');
-                btnFinishCapture.classList.remove('hidden');
+                btnCapture.classList.add('hidden'); btnFinishCapture.classList.remove('hidden');
                 document.getElementById('instruction-text').innerText = "Studio Penuh! Lanjut untuk melihat hasil.";
             } else {
-                btnCapture.classList.remove('hidden');
-                btnFinishCapture.classList.add('hidden');
+                btnCapture.classList.remove('hidden'); btnFinishCapture.classList.add('hidden');
                 document.getElementById('instruction-text').innerText = "Pilih mode lalu jepret. Rekam 3s";
             }
         }
 
         function removePhotoFromCapture(idx) {
             if (videoBlobs[idx]) URL.revokeObjectURL(videoBlobs[idx]);
-            
-            photos.splice(idx, 1);
-            videoBlobs.splice(idx, 1);
-            currentPhotoIndex--;
+            photos.splice(idx, 1); videoBlobs.splice(idx, 1); currentPhotoIndex--;
             counterText.innerText = `Grid: ${currentPhotoIndex} / ${maxPhotos}`;
             updateCaptureGallery();
         }
 
         btnFinishCapture.onclick = () => {
-            document.getElementById('view-camera').classList.add('hidden');
-            document.getElementById('view-result').classList.remove('hidden');
+            document.getElementById('view-camera').classList.add('hidden'); document.getElementById('view-result').classList.remove('hidden'); document.getElementById('view-result').classList.add('flex');
             reRenderResults();
         };
 
@@ -425,32 +472,24 @@
             btnCapture.style.opacity = '0.5'; btnCapture.style.transform = 'scale(0.9)';
             instructionText.innerHTML = "<span class='text-red-400 font-bold'>Tahan Pose! Merekam Action...</span>";
             
-            // Logika Flash diperbaiki: Jalankan Torch API (jika ada) DAN Flash Screen
             if (isFlashOn) { 
-                await setTorchStatus(true); 
-                flashEffect.classList.add('flash-active'); 
-                setTimeout(() => flashEffect.classList.remove('flash-active'), 300); 
+                await setTorchStatus(true); flashEffect.classList.add('flash-active'); 
+                await new Promise(r => setTimeout(r, 200)); setTimeout(() => flashEffect.classList.remove('flash-active'), 300); 
             }
 
             const tempCanvas = document.createElement('canvas'); tempCanvas.width = videoElement.videoWidth; tempCanvas.height = videoElement.videoHeight;
             const ctx = tempCanvas.getContext('2d', { alpha: false }); 
             if (isFrontCamera) { ctx.translate(tempCanvas.width, 0); ctx.scale(-1, 1); }
             ctx.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
-            photos.push(tempCanvas.toDataURL('image/jpeg', 0.9));
+            photos.push(tempCanvas.toDataURL('image/jpeg', 1.0));
 
             currentPhotoIndex++; counterText.innerText = `Grid: ${currentPhotoIndex} / ${maxPhotos}`;
             recordingIndicator.classList.remove('hidden');
 
             recordedChunks = [];
-            
-            // Codec yang dioptimalkan
-            let mimeTypes = [
-                'video/webm;codecs=vp8',
-                'video/webm',
-                'video/mp4'
-            ];
+            let mimeTypes = ['video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
             let mimeType = mimeTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
-            let options = mimeType ? { mimeType: mimeType, videoBitsPerSecond: 2000000 } : {};
+            let options = mimeType ? { mimeType: mimeType, videoBitsPerSecond: 8000000 } : {}; 
             
             try { mediaRecorder = new MediaRecorder(currentStream, options); } 
             catch (e) { mediaRecorder = new MediaRecorder(currentStream); }
@@ -461,34 +500,20 @@
                 mediaRecorder.onstop = () => {
                     const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || mimeType || 'video/webm' }); 
                     videoBlobs.push(URL.createObjectURL(blob));
-                    isRecording = false; 
-                    if (isFlashOn) setTorchStatus(false);
-                    
+                    isRecording = false; if (isFlashOn) setTorchStatus(false);
                     btnCapture.style.opacity = '1'; btnCapture.style.transform = 'scale(1)';
-                    instructionText.innerHTML = "Pilih mode lalu jepret. Rekam 3s";
-                    recordingIndicator.classList.add('hidden');
+                    instructionText.innerHTML = "Pilih mode lalu jepret. Rekam 3s"; recordingIndicator.classList.add('hidden');
                     resolve();
                 };
-                // Gunakan timeslice untuk memastikan data chunk ter-push sempurna
-                mediaRecorder.start(100);
-                setTimeout(() => { if(mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 3000); 
+                mediaRecorder.start(100); setTimeout(() => { if(mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 3000); 
             });
         }
 
         btnCapture.onclick = async () => {
             if (isProcessingCapture || currentPhotoIndex >= maxPhotos) return;
             isProcessingCapture = true;
-            
-            if (isAutoMode) { 
-                while (currentPhotoIndex < maxPhotos) {
-                    await captureSingleLogic(); 
-                    updateCaptureGallery(); 
-                }
-            } else { 
-                await captureSingleLogic(); 
-                updateCaptureGallery();
-            }
-            
+            if (isAutoMode) { while (currentPhotoIndex < maxPhotos) { await captureSingleLogic(); updateCaptureGallery(); } } 
+            else { await captureSingleLogic(); updateCaptureGallery(); }
             isProcessingCapture = false;
         };
 
@@ -543,24 +568,17 @@
                 const grad = ctx.createLinearGradient(0, h, w, 0); grad.addColorStop(0, '#f09433'); grad.addColorStop(0.25, '#e6683c'); grad.addColorStop(0.5, '#dc2743'); grad.addColorStop(1, '#bc1888'); ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
                 ctx.fillStyle = '#FFF'; ctx.font = '60px Arial'; ctx.fillText('✨', 80, 120); ctx.fillText('📸', w-140, h-80);
             } else if (id === 'social') {
-                ctx.fillStyle = '#E9EBEE'; ctx.fillRect(0, 0, w, h);
-                ctx.fillStyle = '#25D366'; safeRoundRect(ctx, 60, h-130, 280, 70, 35); ctx.fill();
-                ctx.fillStyle = '#FFF'; ctx.font = 'bold 28px Arial'; ctx.fillText('💬 Mengetik...', 90, h-85);
+                ctx.fillStyle = '#E9EBEE'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#25D366'; safeRoundRect(ctx, 60, h-130, 280, 70, 35); ctx.fill(); ctx.fillStyle = '#FFF'; ctx.font = 'bold 28px Arial'; ctx.fillText('💬 Mengetik...', 90, h-85);
             } else if (id === 'nemo') {
-                const grad = ctx.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, '#006994'); grad.addColorStop(1, '#001a33'); ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
-                ctx.fillStyle = 'rgba(255,255,255,0.2)'; for(let i=0; i<30; i++) { ctx.beginPath(); ctx.arc(Math.random()*w, Math.random()*h, Math.random()*15+5, 0, Math.PI*2); ctx.fill(); }
+                const grad = ctx.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, '#006994'); grad.addColorStop(1, '#001a33'); ctx.fillStyle = grad; ctx.fillRect(0,0,w,h); ctx.fillStyle = 'rgba(255,255,255,0.2)'; for(let i=0; i<30; i++) { ctx.beginPath(); ctx.arc(Math.random()*w, Math.random()*h, Math.random()*15+5, 0, Math.PI*2); ctx.fill(); }
             } else if (id === 'upinipin') {
-                ctx.fillStyle = '#87CEEB'; ctx.fillRect(0,0,w,h*0.7); ctx.fillStyle = '#32CD32'; ctx.fillRect(0,h*0.7,w,h*0.3);
-                ctx.fillStyle = '#FFF'; ctx.font = '60px Arial'; ctx.fillText('☁️', 100, 150); ctx.fillText('☁️', w-200, 250);
+                ctx.fillStyle = '#87CEEB'; ctx.fillRect(0,0,w,h*0.7); ctx.fillStyle = '#32CD32'; ctx.fillRect(0,h*0.7,w,h*0.3); ctx.fillStyle = '#FFF'; ctx.font = '60px Arial'; ctx.fillText('☁️', 100, 150); ctx.fillText('☁️', w-200, 250);
             } else if (id === 'minion') {
-                ctx.fillStyle = '#FCE029'; ctx.fillRect(0,0,w,h); ctx.fillStyle = '#3b5998'; ctx.fillRect(0,h-150,w,150);
-                ctx.font = '80px Arial'; ctx.fillText('🍌', w/2-40, h-50);
+                ctx.fillStyle = '#FCE029'; ctx.fillRect(0,0,w,h); ctx.fillStyle = '#3b5998'; ctx.fillRect(0,h-150,w,150); ctx.font = '80px Arial'; ctx.fillText('🍌', w/2-40, h-50);
             } else if (id === 'tiktok') {
-                ctx.fillStyle = '#050505'; ctx.fillRect(0,0,w,h); ctx.font = '50px Arial';
-                for(let i=0;i<10;i++) { ctx.fillStyle=i%2===0?'#00f2fe':'#fe0979'; ctx.fillText('🎵', Math.random()*w, Math.random()*h); }
+                ctx.fillStyle = '#050505'; ctx.fillRect(0,0,w,h); ctx.font = '50px Arial'; for(let i=0;i<10;i++) { ctx.fillStyle=i%2===0?'#00f2fe':'#fe0979'; ctx.fillText('🎵', Math.random()*w, Math.random()*h); }
             } else if (id === 'netflix') {
-                const grad = ctx.createRadialGradient(w/2, h/2, 100, w/2, h/2, 900); grad.addColorStop(0, '#333'); grad.addColorStop(1, '#000'); ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
-                ctx.fillStyle = '#E50914'; ctx.font = 'bold 50px Arial'; ctx.fillText('CHILL', w/2-70, h-80);
+                const grad = ctx.createRadialGradient(w/2, h/2, 100, w/2, h/2, 900); grad.addColorStop(0, '#333'); grad.addColorStop(1, '#000'); ctx.fillStyle = grad; ctx.fillRect(0,0,w,h); ctx.fillStyle = '#E50914'; ctx.font = 'bold 50px Arial'; ctx.fillText('CHILL', w/2-70, h-80);
             }
         }
 
@@ -593,8 +611,14 @@
         }
 
         async function generatePhotoGrid() {
-            const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d', { alpha: false });
-            canvas.width = layout.fW; canvas.height = layout.fH; previewCanvas.width = layout.fW; previewCanvas.height = layout.fH;
+            const canvas = document.createElement('canvas'); 
+            const ctx = canvas.getContext('2d', { alpha: false });
+            
+            const scale = 2; 
+            canvas.width = layout.fW * scale; canvas.height = layout.fH * scale; 
+            ctx.scale(scale, scale); 
+            
+            previewCanvas.width = layout.fW; previewCanvas.height = layout.fH;
             
             drawBackgroundAndFooter(ctx, currentTheme.id, layout.fW, layout.fH);
             for (let i = 0; i < photos.length; i++) {
@@ -613,185 +637,109 @@
                 drawFrameOverlay(ctx, currentTheme.id, x, y, layout.cW, layout.cH);
             }
             
-            previewCanvas.getContext('2d').drawImage(canvas, 0, 0);
+            previewCanvas.getContext('2d').drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, layout.fW, layout.fH);
             
             document.getElementById('btn-download-photo').onclick = async () => { 
                 const btn = document.getElementById('btn-download-photo');
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
-                btn.classList.add('opacity-75', 'cursor-not-allowed');
-                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; btn.classList.add('opacity-75', 'cursor-not-allowed'); btn.disabled = true;
 
                 try {
                     const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
                     const blob = base64ToBlob(dataUrl, 'image/jpeg');
-                    triggerFileDownload(blob, `StudioPro_Strip_${Date.now()}.jpg`);
+                    triggerFileDownload(blob, `StudioPro_Strip_HD_${Date.now()}.jpg`);
                     
-                    btn.innerHTML = '<i class="fas fa-check-circle"></i> Berhasil Disimpan!';
-                    btn.classList.replace('bg-blue-600', 'bg-green-600');
-                    btn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
-                    
+                    btn.innerHTML = '<i class="fas fa-check-circle"></i> Berhasil Disimpan!'; btn.classList.replace('bg-blue-600', 'bg-green-600'); btn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
                     setTimeout(() => {
-                        btn.innerHTML = '<i class="fas fa-image"></i> Simpan Strip Foto <span class="text-green-300 ml-1 text-xs">✓</span>';
-                        btn.classList.replace('bg-green-600', 'bg-blue-600');
-                        btn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+                        btn.innerHTML = '<i class="fas fa-image"></i> Simpan Foto High-Res'; btn.classList.replace('bg-green-600', 'bg-blue-600'); btn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
                     }, 3000);
                 } catch(e) { console.error("Download Error:", e); alert("Gagal menyimpan. Coba lagi."); }
                 
-                btn.classList.remove('opacity-75', 'cursor-not-allowed');
-                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed'); btn.disabled = false;
             };
         }
 
+        async function updateGridsLighter() {
+            if (isRendering) return; isRendering = true;
+            await generatePhotoGrid(); renderIndividualPhotos();
+            isRendering = false;
+            await generateVideoGridBackground();
+        }
+
         function renderRearrangeGrid() {
-            const container = document.getElementById('rearrange-gallery');
-            container.innerHTML = '';
-            
+            const container = document.getElementById('rearrange-gallery'); container.innerHTML = '';
             photos.forEach((src, idx) => {
-                const wrap = document.createElement('div');
-                wrap.className = `rearrange-item relative aspect-[2/3] rounded-lg overflow-hidden border-2 bg-gray-900 border-gray-600 hover:border-blue-400`;
-                
-                const img = document.createElement('img');
-                img.src = src; 
-                img.className = 'w-full h-full object-cover pointer-events-none';
-
-                const badge = document.createElement('div');
-                badge.className = 'absolute top-1 left-1 bg-black/80 text-white w-6 h-6 flex items-center justify-center text-[12px] font-bold rounded-full pointer-events-none shadow-md border border-gray-600';
-                badge.innerText = idx + 1;
-
-                wrap.appendChild(img);
-                wrap.appendChild(badge);
-                container.appendChild(wrap);
+                const wrap = document.createElement('div'); wrap.className = `rearrange-item relative aspect-[2/3] rounded-lg overflow-hidden border-2 bg-gray-900 border-gray-600 hover:border-blue-400`;
+                const img = document.createElement('img'); img.src = src; img.className = 'w-full h-full object-cover pointer-events-none';
+                const badge = document.createElement('div'); badge.className = 'absolute top-1 left-1 bg-black/80 text-white w-6 h-6 flex items-center justify-center text-[12px] font-bold rounded-full pointer-events-none shadow-md border border-gray-600'; badge.innerText = idx + 1;
+                wrap.appendChild(img); wrap.appendChild(badge); container.appendChild(wrap);
             });
 
-            if(window.rearrangeSortable) {
-                window.rearrangeSortable.destroy();
-            }
-
+            if(window.rearrangeSortable) window.rearrangeSortable.destroy();
             window.rearrangeSortable = new Sortable(container, {
-                animation: 200,
-                ghostClass: 'sortable-ghost',
-                dragClass: 'sortable-drag',
-                delay: 100,
-                delayOnTouchOnly: true,
+                animation: 200, ghostClass: 'sortable-ghost', dragClass: 'sortable-drag', delay: 150, delayOnTouchOnly: true,
                 onEnd: async function (evt) {
-                    if(evt.oldIndex === evt.newIndex) return; 
-                    if(isRendering) return; 
-
-                    const movedPhoto = photos.splice(evt.oldIndex, 1)[0];
-                    photos.splice(evt.newIndex, 0, movedPhoto);
-
-                    const movedVideo = videoBlobs.splice(evt.oldIndex, 1)[0];
-                    videoBlobs.splice(evt.newIndex, 0, movedVideo);
-
-                    renderRearrangeGrid(); 
-                    await reRenderResults(); 
+                    if(evt.oldIndex === evt.newIndex || isRendering) return; 
+                    const movedPhoto = photos.splice(evt.oldIndex, 1)[0]; photos.splice(evt.newIndex, 0, movedPhoto);
+                    const movedVideo = videoBlobs.splice(evt.oldIndex, 1)[0]; videoBlobs.splice(evt.newIndex, 0, movedVideo);
+                    renderRearrangeGrid(); await updateGridsLighter(); 
                 }
             });
         }
 
         function renderIndividualPhotos() {
-            const container = document.getElementById('individual-photos-container');
-            container.innerHTML = '';
-            selectedIndividualPhotos.clear();
-            updateSelectedCountUI();
+            const container = document.getElementById('individual-photos-container'); container.innerHTML = '';
+            selectedIndividualPhotos.clear(); updateSelectedCountUI();
 
             photos.forEach((photoDataUrl, index) => {
-                const imgWrap = document.createElement('div');
-                imgWrap.className = 'photo-select-wrap relative aspect-[2/3] rounded-lg overflow-hidden border-2 border-transparent cursor-pointer bg-gray-900 transition-all shadow-md';
+                const imgWrap = document.createElement('div'); imgWrap.className = 'photo-select-wrap relative aspect-[2/3] rounded-lg overflow-hidden border-2 border-transparent cursor-pointer bg-gray-900 transition-all shadow-md';
                 imgWrap.onclick = () => togglePhotoSelection(index, imgWrap);
-
-                const img = document.createElement('img');
-                img.src = photoDataUrl;
-                img.className = 'w-full h-full object-cover';
-
-                const check = document.createElement('div');
-                check.className = 'check-icon absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-[10px] font-bold shadow-md z-20';
-                check.innerHTML = '<i class="fas fa-check"></i>';
-                
-                const badge = document.createElement('div');
-                badge.id = `badge-dl-${index}`;
-                badge.className = 'downloaded-badge hidden absolute bottom-1 right-1 bg-green-500 text-white text-[9px] px-1.5 py-0.5 rounded-md shadow-md font-bold z-10';
-                badge.innerHTML = '<i class="fas fa-check"></i> Tersimpan';
-
-                imgWrap.appendChild(img);
-                imgWrap.appendChild(check);
-                imgWrap.appendChild(badge);
-                container.appendChild(imgWrap);
+                const img = document.createElement('img'); img.src = photoDataUrl; img.className = 'w-full h-full object-cover';
+                const check = document.createElement('div'); check.className = 'check-icon absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-[10px] font-bold shadow-md z-20'; check.innerHTML = '<i class="fas fa-check"></i>';
+                const badge = document.createElement('div'); badge.id = `badge-dl-${index}`; badge.className = 'downloaded-badge hidden absolute bottom-1 right-1 bg-green-500 text-white text-[9px] px-1.5 py-0.5 rounded-md shadow-md font-bold z-10'; badge.innerHTML = '<i class="fas fa-check"></i> Tersimpan';
+                imgWrap.appendChild(img); imgWrap.appendChild(check); imgWrap.appendChild(badge); container.appendChild(imgWrap);
             });
         }
 
         function togglePhotoSelection(index, element) {
-            if (selectedIndividualPhotos.has(index)) {
-                selectedIndividualPhotos.delete(index);
-                element.classList.remove('selected');
-            } else {
-                selectedIndividualPhotos.add(index);
-                element.classList.add('selected');
-            }
+            if (selectedIndividualPhotos.has(index)) { selectedIndividualPhotos.delete(index); element.classList.remove('selected'); } 
+            else { selectedIndividualPhotos.add(index); element.classList.add('selected'); }
             updateSelectedCountUI();
         }
 
         function updateSelectedCountUI() {
-            const count = selectedIndividualPhotos.size;
-            document.getElementById('selected-count').innerText = count;
+            const count = selectedIndividualPhotos.size; document.getElementById('selected-count').innerText = count;
             const btn = document.getElementById('btn-download-selected');
-            if (count > 0) {
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-            } else {
-                btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-            }
+            if (count > 0) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); } 
+            else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); }
         }
 
         document.getElementById('btn-download-selected').onclick = async () => {
             if (selectedIndividualPhotos.size === 0) return;
-            const btn = document.getElementById('btn-download-selected');
-            
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengunduh...';
-            btn.classList.add('opacity-75', 'cursor-wait');
-            btn.disabled = true;
+            const btn = document.getElementById('btn-download-selected'); btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengunduh...'; btn.classList.add('opacity-75', 'cursor-wait'); btn.disabled = true;
 
             const selectedArray = Array.from(selectedIndividualPhotos);
-
             for (let i = 0; i < selectedArray.length; i++) {
                 const index = selectedArray[i];
                 try {
                     const blob = base64ToBlob(photos[index], 'image/jpeg');
-                    triggerFileDownload(blob, `StudioPro_FotoSatuan_${index + 1}_${Date.now()}.jpg`);
+                    triggerFileDownload(blob, `StudioPro_Foto_${index + 1}_${Date.now()}.jpg`);
                     document.getElementById(`badge-dl-${index}`).classList.remove('hidden');
                     if (i < selectedArray.length - 1) await new Promise(resolve => setTimeout(resolve, 150));
-                } catch (e) { console.error(`Gagal mengunduh foto ke-${index + 1}:`, e); }
+                } catch (e) { }
             }
-
-            btn.innerHTML = '<i class="fas fa-check-double"></i> Berhasil Diunduh!';
-            btn.classList.replace('bg-purple-600', 'bg-green-600');
-            btn.classList.replace('hover:bg-purple-700', 'hover:bg-green-700');
-            
-            setTimeout(() => {
-                btn.innerHTML = `<i class="fas fa-download"></i> Unduh Terpilih (<span id="selected-count">${selectedIndividualPhotos.size}</span>) <span class="text-green-300 ml-1 text-xs">✓</span>`;
-                btn.classList.replace('bg-green-600', 'bg-purple-600');
-                btn.classList.replace('hover:bg-green-700', 'hover:bg-purple-700');
-            }, 3000);
-
-            btn.classList.remove('opacity-75', 'cursor-wait');
-            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-double"></i> Berhasil Diunduh!'; btn.classList.replace('bg-purple-600', 'bg-green-600'); btn.classList.replace('hover:bg-purple-700', 'hover:bg-green-700');
+            setTimeout(() => { btn.innerHTML = `<i class="fas fa-download"></i> Unduh Terpilih (<span id="selected-count">${selectedIndividualPhotos.size}</span>)`; btn.classList.replace('bg-green-600', 'bg-purple-600'); btn.classList.replace('hover:bg-green-700', 'hover:bg-purple-700'); }, 3000);
+            btn.classList.remove('opacity-75', 'cursor-wait'); btn.disabled = false;
         };
 
         async function generateVideoGridBackground() {
-            isVideoReady = false;
-            btnDownloadVideo.classList.remove('flex'); btnDownloadVideo.classList.add('hidden');
+            isVideoReady = false; btnDownloadVideo.classList.remove('flex'); btnDownloadVideo.classList.add('hidden');
+            currentRenderId++; const renderId = currentRenderId;
             
-            currentRenderId++;
-            const renderId = currentRenderId;
-            
-            const gridCanvas = document.createElement('canvas'); 
-            gridCanvas.width = layout.fW; gridCanvas.height = layout.fH;
+            const gridCanvas = document.createElement('canvas'); gridCanvas.width = layout.fW; gridCanvas.height = layout.fH;
             const gCtx = gridCanvas.getContext('2d', { alpha: false }); 
-            
             const bgCache = document.createElement('canvas'), overlayCache = document.createElement('canvas');
             bgCache.width = layout.fW; bgCache.height = layout.fH; overlayCache.width = layout.fW; overlayCache.height = layout.fH;
-            
             const bCtx = bgCache.getContext('2d', { alpha: false }), oCtx = overlayCache.getContext('2d'); 
             drawBackgroundAndFooter(bCtx, currentTheme.id, layout.fW, layout.fH);
             
@@ -799,38 +747,21 @@
             for (let i = 0; i < maxPhotos; i++) {
                 const x = layout.paddingX + (i%2) * (layout.cW + layout.gapX), y = layout.paddingTop + Math.floor(i/2) * (layout.cH + layout.gapY);
                 coords.push({x, y});
-                drawFrameBase(bCtx, currentTheme.id, x, y, layout.cW, layout.cH);
-                drawFrameOverlay(oCtx, currentTheme.id, x, y, layout.cW, layout.cH);
+                drawFrameBase(bCtx, currentTheme.id, x, y, layout.cW, layout.cH); drawFrameOverlay(oCtx, currentTheme.id, x, y, layout.cW, layout.cH);
             }
 
-            domVideoElements.forEach(v => v.remove()); 
-            domVideoElements = [];
-            
-            const videoElements = [];
-            const loadPromises = []; 
+            domVideoElements.forEach(v => v.remove()); domVideoElements = [];
+            const videoElements = []; const loadPromises = []; 
             
             for (let i = 0; i < videoBlobs.length; i++) {
-                const v = document.createElement('video'); 
-                v.src = videoBlobs[i]; 
-                
-                v.setAttribute('playsinline', '');
-                v.setAttribute('muted', '');
-                v.muted = true; v.loop = true; v.playsInline = true;
-                v.playbackRate = 0.8;
-                
-                v.style.position = 'fixed'; v.style.top = '0px'; v.style.left = '0px'; 
-                v.style.width = '2px'; v.style.height = '2px'; 
-                v.style.opacity = '0.01'; v.style.pointerEvents = 'none'; v.style.zIndex = '-1';
-                v.preload = "auto";
-                
-                document.body.appendChild(v);
-                domVideoElements.push(v);
-                videoElements.push(v);
+                const v = document.createElement('video'); v.src = videoBlobs[i]; 
+                v.setAttribute('playsinline', ''); v.setAttribute('muted', ''); v.muted = true; v.loop = true; v.playsInline = true; v.playbackRate = 0.8;
+                v.style.position = 'fixed'; v.style.top = '0px'; v.style.left = '0px'; v.style.width = '2px'; v.style.height = '2px'; v.style.opacity = '0.01'; v.style.pointerEvents = 'none'; v.style.zIndex = '-1'; v.preload = "auto";
+                document.body.appendChild(v); domVideoElements.push(v); videoElements.push(v);
                 
                 loadPromises.push(new Promise(resolve => {
-                    v.oncanplay = resolve;
-                    v.onloadeddata = resolve;
-                    setTimeout(resolve, 1500); 
+                    v.onloadeddata = () => { resolve(); };
+                    setTimeout(resolve, 2000); 
                 }));
             }
 
@@ -840,107 +771,60 @@
             videoElements.forEach(v => { v.play().catch(()=>{}); });
 
             gCtx.drawImage(bgCache, 0, 0); 
+            gridCanvas.id = 'grid-canvas-fallback'; gridCanvas.className = "w-full bg-black rounded-xl shadow-2xl object-contain border-4 border-gray-800 shrink-0";
+            gridCanvas.style.aspectRatio = "2/3"; gridCanvas.style.display = 'block';
             
-            gridCanvas.id = 'grid-canvas-fallback';
-            gridCanvas.className = "w-full bg-black rounded-xl shadow-2xl object-contain border-4 border-gray-800 shrink-0";
-            gridCanvas.style.aspectRatio = "2/3";
-            gridCanvas.style.display = 'block';
+            const oldFallback = document.getElementById('grid-canvas-fallback'); if (oldFallback) oldFallback.remove();
             
-            const oldFallback = document.getElementById('grid-canvas-fallback');
-            if (oldFallback) oldFallback.remove();
-            
-            videoWrapper.insertBefore(gridCanvas, videoLoadingState);
-            previewVideo.style.display = 'none'; 
-
+            videoWrapper.appendChild(gridCanvas); 
             isVideoReady = true;
-            videoLoadingState.classList.add('hidden');
-            if (!videoWrapper.classList.contains('hidden')) {
-                btnDownloadVideo.classList.remove('hidden'); btnDownloadVideo.classList.add('flex');
-            }
+            if (!videoWrapper.classList.contains('hidden')) { btnDownloadVideo.classList.remove('hidden'); btnDownloadVideo.classList.add('flex'); }
 
             let canvasStream = null;
-            try {
-                if (gridCanvas.captureStream) canvasStream = gridCanvas.captureStream(30);
-                else if (gridCanvas.mozCaptureStream) canvasStream = gridCanvas.mozCaptureStream(30);
-                else if (gridCanvas.webkitCaptureStream) canvasStream = gridCanvas.webkitCaptureStream(30);
-            } catch (err) { console.warn("Capture stream tidak didukung."); }
+            try { if (gridCanvas.captureStream) canvasStream = gridCanvas.captureStream(30); else if (gridCanvas.mozCaptureStream) canvasStream = gridCanvas.mozCaptureStream(30); } 
+            catch (err) { }
 
-            btnDownloadVideo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan Unduhan...';
-            btnDownloadVideo.classList.add('opacity-75', 'cursor-wait');
-            
-            btnDownloadVideo.onclick = (e) => { e.preventDefault(); alert("Sedang menyiapkan video Anda, harap tunggu sebentar..."); };
+            btnDownloadVideo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan Unduhan...'; btnDownloadVideo.classList.add('opacity-75', 'cursor-wait'); btnDownloadVideo.onclick = (e) => { e.preventDefault(); };
 
             let gridRecorder = null;
             if (canvasStream) {
                 try {
-                    // Codec diperbaiki untuk mediarecorder Canvas 
                     let types = ['video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
                     let mimeType = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
-                    
-                    let options = { videoBitsPerSecond: 3000000 };
-                    if (mimeType) options.mimeType = mimeType;
+                    let options = { videoBitsPerSecond: 5000000 }; if (mimeType) options.mimeType = mimeType;
                     
                     gridRecorder = new MediaRecorder(canvasStream, options);
-                    const gridChunks = []; 
-                    gridRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) gridChunks.push(e.data); };
-
+                    const gridChunks = []; gridRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) gridChunks.push(e.data); };
                     gridRecorder.onstop = () => {
                         if (renderId !== currentRenderId) return;
-                        
-                        const finalMimeType = gridRecorder.mimeType || mimeType || 'video/webm';
-                        const extension = finalMimeType.includes('mp4') ? 'mp4' : 'webm';
+                        const finalMimeType = gridRecorder.mimeType || mimeType || 'video/webm'; const extension = finalMimeType.includes('mp4') ? 'mp4' : 'webm';
                         const blob = new Blob(gridChunks, { type: finalMimeType });
+                        if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl); currentVideoUrl = URL.createObjectURL(blob);
                         
-                        if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
-                        currentVideoUrl = URL.createObjectURL(blob);
-                        
-                        btnDownloadVideo.innerHTML = '<i class="fas fa-video"></i> Simpan Video Slow-Mo';
-                        btnDownloadVideo.classList.remove('opacity-75', 'cursor-wait');
-                        
+                        btnDownloadVideo.innerHTML = '<i class="fas fa-video"></i> Simpan Video HD'; btnDownloadVideo.classList.remove('opacity-75', 'cursor-wait');
                         btnDownloadVideo.onclick = () => { 
-                            triggerFileDownload(blob, `StudioPro_Video_${Date.now()}.${extension}`);
-                            
-                            btnDownloadVideo.innerHTML = '<i class="fas fa-check-circle"></i> Video Tersimpan!';
-                            btnDownloadVideo.classList.replace('bg-emerald-600', 'bg-green-600');
-                            btnDownloadVideo.classList.replace('hover:bg-emerald-700', 'hover:bg-green-700');
-                            
-                            setTimeout(() => {
-                                btnDownloadVideo.innerHTML = '<i class="fas fa-video"></i> Simpan Video Slow-Mo <span class="text-green-300 ml-1 text-xs">✓</span>';
-                                btnDownloadVideo.classList.replace('bg-green-600', 'bg-emerald-600');
-                                btnDownloadVideo.classList.replace('hover:bg-green-700', 'hover:bg-emerald-700');
-                            }, 3000);
+                            triggerFileDownload(blob, `StudioPro_Video_HD_${Date.now()}.${extension}`);
+                            btnDownloadVideo.innerHTML = '<i class="fas fa-check-circle"></i> Video Tersimpan!'; btnDownloadVideo.classList.replace('bg-emerald-600', 'bg-green-600'); btnDownloadVideo.classList.replace('hover:bg-emerald-700', 'hover:bg-green-700');
+                            setTimeout(() => { btnDownloadVideo.innerHTML = '<i class="fas fa-video"></i> Simpan Video HD'; btnDownloadVideo.classList.replace('bg-green-600', 'bg-emerald-600'); btnDownloadVideo.classList.replace('hover:bg-green-700', 'hover:bg-emerald-700'); }, 3000);
                         };
                     };
-                } catch (e) { console.warn("MediaRecorder Error", e); }
-            } else {
-                btnDownloadVideo.innerHTML = '<i class="fas fa-video-slash"></i> Perangkat Tidak Mendukung';
-                btnDownloadVideo.classList.remove('opacity-75', 'cursor-wait');
-                btnDownloadVideo.onclick = () => alert("Penyimpanan video live tidak di dukung pada versi browser/OS ini.");
+                } catch (e) { }
             }
 
             let isDrawing = true;
             function drawVideoFrame() {
                 if (!isDrawing || renderId !== currentRenderId) return;
-                
                 gCtx.drawImage(bgCache, 0, 0); 
-                
                 for (let i = 0; i < videoElements.length; i++) {
                     const v = videoElements[i], c = coords[i];
                     if (v.videoWidth === 0 || v.readyState < 2) continue; 
-                    
-                    gCtx.save(); 
-                    applyClip(gCtx, currentTheme.id, c.x, c.y, layout.cW, layout.cH);
-                    
+                    gCtx.save(); applyClip(gCtx, currentTheme.id, c.x, c.y, layout.cW, layout.cH);
                     const ratio = Math.max(layout.cW / v.videoWidth, layout.cH / v.videoHeight);
-                    const dw = v.videoWidth * ratio;
-                    const dh = v.videoHeight * ratio;
-                    
+                    const dw = v.videoWidth * ratio, dh = v.videoHeight * ratio;
                     gCtx.translate(c.x + layout.cW / 2, c.y + layout.cH / 2);
                     if (isFrontCamera) { gCtx.scale(-1, 1); }
-                    gCtx.drawImage(v, -dw / 2, -dh / 2, dw, dh);
-                    gCtx.restore();
+                    gCtx.drawImage(v, -dw / 2, -dh / 2, dw, dh); gCtx.restore();
                 }
-                
                 gCtx.drawImage(overlayCache, 0, 0);
                 requestAnimationFrame(drawVideoFrame);
             }
@@ -949,55 +833,31 @@
 
             setTimeout(() => {
                 if (renderId === currentRenderId && gridRecorder && gridRecorder.state === 'inactive') {
-                    try {
-                        // Jalankan fungsi timeslice agar chunk direkam berkala untuk menghindari corrupt
-                        gridRecorder.start(100);
-                        setTimeout(() => { 
-                            if(gridRecorder && gridRecorder.state === 'recording') {
-                                gridRecorder.stop(); 
-                            }
-                        }, 5000); 
-                    } catch (e) { console.error("Recording error:", e); }
+                    try { gridRecorder.start(100); setTimeout(() => { if(gridRecorder && gridRecorder.state === 'recording') gridRecorder.stop(); }, 5000); } catch (e) {}
                 }
-            }, 1000); // Waktu jeda diperpanjang sedikit agar canvas mulai melukis frame dengan sempurna sebelum rekam 
+            }, 300); 
         }
 
         async function reRenderResults() {
-            if (isRendering) return;
-            isRendering = true;
+            if (isRendering) return; isRendering = true;
             themeContainer.classList.add('opacity-50', 'pointer-events-none');
             document.getElementById('final-state').classList.add('hidden'); document.getElementById('final-state').classList.remove('flex');
             
-            renderRearrangeGrid();
-            await generatePhotoGrid();
-            renderIndividualPhotos(); 
+            renderRearrangeGrid(); await generatePhotoGrid(); renderIndividualPhotos(); 
             
             document.getElementById('final-state').classList.remove('hidden'); document.getElementById('final-state').classList.add('flex');
             togglePhoto.click(); 
-            
-            themeContainer.classList.remove('opacity-50', 'pointer-events-none');
-            isRendering = false;
+            themeContainer.classList.remove('opacity-50', 'pointer-events-none'); isRendering = false;
             
             await generateVideoGridBackground(); 
         }
 
         document.getElementById('btn-restart').onclick = async () => {
-            currentRenderId++; 
-            photos = []; videoBlobs.forEach(b => URL.revokeObjectURL(b)); videoBlobs = [];
-            selectedIndividualPhotos.clear(); updateSelectedCountUI(); 
-            domVideoElements.forEach(v => v.remove()); domVideoElements = [];
-            
+            currentRenderId++; photos = []; videoBlobs.forEach(b => URL.revokeObjectURL(b)); videoBlobs = [];
+            selectedIndividualPhotos.clear(); updateSelectedCountUI(); domVideoElements.forEach(v => v.remove()); domVideoElements = [];
             if (currentVideoUrl) { URL.revokeObjectURL(currentVideoUrl); currentVideoUrl = null; }
-            previewVideo.pause(); 
-            previewVideo.srcObject = null; 
-            previewVideo.removeAttribute('src'); 
-            previewVideo.load();
-            
-            currentPhotoIndex = 0; counterText.innerText = `Grid: 0 / ${maxPhotos}`;
-            updateCaptureGallery(); 
-
-            document.getElementById('view-result').classList.add('hidden');
-            document.getElementById('final-state').classList.add('hidden'); document.getElementById('final-state').classList.remove('flex');
+            currentPhotoIndex = 0; counterText.innerText = `Grid: 0 / ${maxPhotos}`; updateCaptureGallery(); 
+            document.getElementById('view-result').classList.add('hidden'); document.getElementById('final-state').classList.add('hidden'); document.getElementById('final-state').classList.remove('flex');
             document.getElementById('view-camera').classList.remove('hidden');
             await initCamera();
         };
