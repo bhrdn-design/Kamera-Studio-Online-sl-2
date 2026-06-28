@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Mobile Photo Booth Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #111827; color: white; overflow-x: hidden; touch-action: manipulation; }
+        #camera-container { position: relative; width: 100%; height: 55vh; background: #000; overflow: hidden; border-radius: 0 0 24px 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        
+        #camera-feed { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+        
+        .flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; transition: opacity 0.2s ease-out; z-index: 50; }
+        .flash-active { opacity: 1 !important; }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .countdown-anim { animation: popIn 0.8s ease-out forwards; }
+        #countdown-display { text-shadow: 0 4px 15px rgba(0,0,0,0.8); }
+
+        .theme-btn.active { border-color: #3b82f6; transform: scale(1.05); box-shadow: 0 0 15px rgba(59,130,246,0.5); }
+        .loader { border: 4px solid #374151; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #theme-selector::-webkit-scrollbar { display: none; }
+        #theme-selector { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .photo-select-wrap.selected { border-color: #3b82f6; transform: scale(0.95); box-shadow: 0 0 10px rgba(59,130,246,0.6); }
+        .photo-select-wrap .check-icon { opacity: 0; transform: scale(0.5); transition: all 0.2s ease; }
+        .photo-select-wrap.selected .check-icon { opacity: 1; transform: scale(1); }
+        
+        /* Tambahan animasi sukses unduh */
+        @keyframes successPop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .downloaded-badge { animation: successPop 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <div id="tutorial-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-gray-900 border border-gray-700 p-6 rounded-2xl w-11/12 max-w-sm shadow-2xl text-center transform scale-100 transition-transform">
+            <h2 class="text-2xl font-bold text-blue-400 mb-2">Panduan Cepat</h2>
+            <p class="text-gray-400 text-sm mb-5">Smart Studio Booth di Genggamanmu!</p>
+            <div class="space-y-4 text-left text-sm text-gray-200 mb-6">
+                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-hand-pointer w-4 text-center"></i></div> 1. Pilih mode jepret (Auto/Manual).</div>
+                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-camera w-4 text-center"></i></div> 2. Jepret 6x & tahan pose 3 detik!</div>
+                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-magic w-4 text-center"></i></div> 3. Pilih bingkai estetik favoritmu.</div>
+                <div class="flex items-center gap-3"><div class="bg-blue-600/20 p-2 rounded-lg text-blue-400"><i class="fas fa-download w-4 text-center"></i></div> 4. Simpan foto & video ke galeri.</div>
+            </div>
+            <button id="btn-close-tutorial" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-transform">Mengerti, Mulai!</button>
+        </div>
+    </div>
+
+    <div id="view-camera" class="flex-1 flex flex-col w-full h-full">
+        <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
+            <h1 class="text-xl font-bold tracking-wider">STUDIO<span class="text-blue-500">PRO</span></h1>
+            <div class="flex gap-4">
+                <button id="btn-flash" class="text-white bg-gray-800/60 p-3 rounded-full backdrop-blur-md"><i class="fas fa-bolt"></i></button>
+                <button id="btn-switch" class="text-white bg-gray-800/60 p-3 rounded-full backdrop-blur-md"><i class="fas fa-camera-rotate"></i></button>
+            </div>
+        </div>
+
+        <div id="camera-container">
+            <video id="camera-feed" autoplay playsinline muted></video>
+            <div class="flash-overlay" id="flash-effect"></div>
+            
+            <div id="countdown-display" class="hidden absolute inset-0 flex items-center justify-center text-[150px] font-extrabold text-white z-40 drop-shadow-2xl"></div>
+            
+            <div id="recording-indicator" class="hidden absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-5 py-2 rounded-full text-sm font-bold flex items-center gap-3 shadow-lg z-20">
+                <div class="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+                Action! (3s)
+            </div>
+        </div>
+
+        <div class="flex-1 p-4 flex flex-col justify-center gap-8 overflow-y-auto">
+            <div class="flex justify-center gap-3 w-full max-w-sm mx-auto mb-2 mt-4">
+                <button id="mode-manual" class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold shadow-lg border border-blue-400 transition-colors">Manual Shot</button>
+                <button id="mode-auto" class="flex-1 bg-gray-800 text-gray-400 py-2 rounded-lg text-sm font-bold shadow-lg border border-gray-600 transition-colors">Auto (Timer)</button>
+            </div>
+
+            <div class="flex flex-col items-center gap-3">
+                <p id="counter-text" class="text-lg font-bold">Grid: 0 / 6</p>
+                <button id="btn-capture" class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-[0_0_0_4px_rgba(59,130,246,0.5)] active:scale-90 transition-transform disabled:opacity-50 disabled:scale-100">
+                    <div class="w-16 h-16 bg-blue-500 rounded-full border-2 border-white"></div>
+                </button>
+                <p id="instruction-text" class="text-xs text-gray-400 text-center leading-relaxed">Pilih mode lalu jepret.<br>Rekam 3s &rarr; Proses Rendering Cepat</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-result" class="hidden flex-1 flex flex-col w-full h-full p-5 bg-gray-900 overflow-y-auto">
+        <h2 class="text-2xl font-bold text-center mb-4 mt-2">Hasil Studio</h2>
+        
+        <div id="theme-container" class="w-full max-w-sm mx-auto mb-2 transition-opacity duration-300">
+            <h3 class="text-sm font-bold text-gray-400 mb-3 px-1">Pilih Bingkai:</h3>
+            <div class="flex overflow-x-auto gap-3 pb-3 snap-x" id="theme-selector"></div>
+        </div>
+        
+        <div id="processing-state" class="flex flex-col items-center justify-center flex-1 py-10 hidden">
+            <div class="loader mb-4"></div>
+            <p class="text-lg font-semibold animate-pulse text-center">Memproses Studio...<br><span class="text-sm text-gray-400">Harap tunggu sebentar</span></p>
+        </div>
+
+        <div id="final-state" class="hidden flex-col items-center flex-1 pb-10">
+            <div class="flex gap-2 mb-4 w-full max-w-sm bg-gray-800 p-1 rounded-xl mt-2">
+                <button id="toggle-photo" class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold transition-colors">Lihat Foto</button>
+                <button id="toggle-video" class="flex-1 bg-transparent text-gray-400 hover:text-white py-2 rounded-lg text-sm font-bold transition-colors">Lihat Live Video</button>
+            </div>
+
+            <canvas id="preview-canvas" style="aspect-ratio: 2/3;" class="w-full max-w-sm bg-black rounded-xl shadow-2xl mb-6 object-contain border-4 border-gray-800"></canvas>
+            
+            <div id="video-wrapper" class="hidden w-full max-w-sm relative mb-6">
+                <video id="preview-video" style="aspect-ratio: 2/3; display: none;" class="w-full bg-black rounded-xl shadow-2xl object-contain border-4 border-gray-800" autoplay loop muted playsinline></video>
+                <div id="video-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-xl z-10">
+                    <div class="loader mb-3 border-t-emerald-500"></div>
+                    <span class="text-sm font-bold text-emerald-400 animate-pulse">Menyiapkan Preview...</span>
+                </div>
+            </div>
+            
+            <div class="w-full max-w-sm flex flex-col gap-3">
+                <button id="btn-download-photo" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg flex justify-center items-center gap-2 transition-colors duration-300">
+                    <i class="fas fa-image"></i> Simpan Strip Foto
+                </button>
+                <button id="btn-download-video" class="hidden w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-lg justify-center items-center gap-2 transition-colors duration-300">
+                    <i class="fas fa-video"></i> Simpan Video Slow-Mo
+                </button>
+
+                <div class="w-full mt-2 p-4 bg-gray-800 rounded-xl border border-gray-700">
+                    <h3 class="text-sm font-bold text-gray-300 mb-3 text-center">Pilih & Unduh Foto Satuan</h3>
+                    <div id="individual-photos-container" class="grid grid-cols-3 gap-2 mb-4">
+                    </div>
+                    <button id="btn-download-selected" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl shadow-lg flex justify-center items-center gap-2 transition-colors opacity-50 cursor-not-allowed duration-300" disabled>
+                        <i class="fas fa-download"></i> Unduh Terpilih (<span id="selected-count">0</span>)
+                    </button>
+                </div>
+                <button id="btn-restart" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3.5 rounded-xl shadow-lg mt-3">
+                    <i class="fas fa-rotate-right"></i> Mulai Sesi Baru
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStream = null, videoTrack = null;
+        let isFrontCamera = true, isFlashOn = false, isRecording = false, isAutoMode = false, isProcessingCapture = false, isRendering = false; 
+        
+        let photos = [], videoBlobs = [], domVideoElements = [];
+        let currentPhotoIndex = 0;
+        const maxPhotos = 6;
+        let mediaRecorder, recordedChunks = [], currentVideoUrl = null;
+        let isVideoReady = false;
+        let currentRenderId = 0;
+
+        let selectedIndividualPhotos = new Set();
+
+        function base64ToBlob(base64Data, contentType = 'image/jpeg') {
+            const byteCharacters = atob(base64Data.split(',')[1]);
+            const byteArrays = [];
+            for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+                const slice = byteCharacters.slice(offset, offset + 512);
+                const byteNumbers = new Array(slice.length);
+                for (let i = 0; i < slice.length; i++) {
+                    byteNumbers[i] = slice.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                byteArrays.push(byteArray);
+            }
+            return new Blob(byteArrays, { type: contentType });
+        }
+
+        function triggerFileDownload(blob, filename) {
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            a.download = filename;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            }, 1000);
+        }
+
+        const themes = [
+            { id: 'wood', name: 'Rustic Vine', bg: '#C19A6B' },
+            { id: 'bluepink', name: 'Y2K Vibes', bg: '#7db4e6' },
+            { id: 'spotify', name: 'Spotify Audio', bg: '#1DB954' },
+            { id: 'polaroid', name: 'Sticker Scrap', bg: '#ffffff' },
+            { id: 'film', name: 'Film Burn', bg: '#111' },
+            { id: 'cyberpunk', name: 'Neon Matrix', bg: '#050505' },
+            { id: 'love', name: 'Love Vibes', bg: '#FFB6C1' },
+            { id: 'hero', name: 'Super Hero', bg: '#E23636' },
+            { id: 'cartoon', name: 'Toon World', bg: '#FAD7A1' },
+            { id: 'ig', name: 'Insta Style', bg: '#C13584' },
+            { id: 'social', name: 'Social Connect', bg: '#1877F2' },
+            { id: 'nemo', name: 'Nemo Ocean', bg: '#FF7F50' },
+            { id: 'upinipin', name: 'Kampung Boy', bg: '#FFD700' },
+            { id: 'minion', name: 'Banana Crew', bg: '#FCE029' },
+            { id: 'tiktok', name: 'FYP Trend', bg: '#000000' },
+            { id: 'netflix', name: 'Chill Movie', bg: '#E50914' }
+        ];
+        let currentTheme = themes[0];
+
+        const videoElement = document.getElementById('camera-feed'), flashEffect = document.getElementById('flash-effect');
+        const btnCapture = document.getElementById('btn-capture'), counterText = document.getElementById('counter-text');
+        const instructionText = document.getElementById('instruction-text'), recordingIndicator = document.getElementById('recording-indicator');
+        const countdownDisplay = document.getElementById('countdown-display'), previewCanvas = document.getElementById('preview-canvas');
+        const previewVideo = document.getElementById('preview-video'), themeContainer = document.getElementById('theme-container');
+        const videoWrapper = document.getElementById('video-wrapper'), videoLoadingState = document.getElementById('video-loading');
+        
+        const togglePhoto = document.getElementById('toggle-photo'), toggleVideo = document.getElementById('toggle-video');
+        const btnDownloadPhoto = document.getElementById('btn-download-photo'), btnDownloadVideo = document.getElementById('btn-download-video');
+        const modeManualBtn = document.getElementById('mode-manual'), modeAutoBtn = document.getElementById('mode-auto');
+
+        document.getElementById('btn-close-tutorial').onclick = function() {
+            const modal = document.getElementById('tutorial-modal');
+            modal.style.opacity = '0';
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+            initCamera();
+        };
+
+        modeManualBtn.onclick = () => {
+            isAutoMode = false;
+            modeManualBtn.className = "flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold shadow-lg border border-blue-400 transition-colors";
+            modeAutoBtn.className = "flex-1 bg-gray-800 text-gray-400 py-2 rounded-lg text-sm font-bold shadow-lg border border-gray-600 transition-colors";
+        };
+
+        modeAutoBtn.onclick = () => {
+            isAutoMode = true;
+            modeAutoBtn.className = "flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold shadow-lg border border-blue-400 transition-colors";
+            modeManualBtn.className = "flex-1 bg-gray-800 text-gray-400 py-2 rounded-lg text-sm font-bold shadow-lg border border-gray-600 transition-colors";
+        };
+
+        async function initCamera() {
+            btnCapture.disabled = true;
+            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); videoElement.srcObject = null; }
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: isFrontCamera ? 'user' : 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false 
+                });
+                videoElement.srcObject = currentStream; videoTrack = currentStream.getVideoTracks()[0];
+                videoElement.style.transform = isFrontCamera ? 'scaleX(-1)' : 'scaleX(1)';
+                await videoElement.play().catch(e => console.warn(e));
+                btnCapture.disabled = false;
+            } catch (err) { alert("Izin kamera diperlukan untuk menggunakan Studio ini."); }
+        }
+
+        function renderThemes() {
+            const container = document.getElementById('theme-selector');
+            container.innerHTML = '';
+            themes.forEach(theme => {
+                const btn = document.createElement('div');
+                btn.className = `theme-btn snap-center flex-shrink-0 w-24 h-20 rounded-xl flex flex-col items-center justify-center cursor-pointer border-2 border-gray-600 transition-all shadow-md`;
+                btn.style.backgroundColor = theme.bg;
+                if (theme.id === currentTheme.id) btn.classList.add('active', 'border-blue-500');
+                
+                const text = document.createElement('span');
+                text.className = `text-[10px] font-bold text-center px-1 leading-tight ${['#ffffff', '#fbb71c', '#7db4e6', '#1DB954', '#FFB6C1', '#FAD7A1', '#FFD700', '#FCE029'].includes(theme.bg) ? 'text-black' : 'text-white'}`;
+                text.innerText = theme.name;
+                
+                btn.appendChild(text);
+                btn.onclick = async () => { 
+                    if (isRendering || currentTheme.id === theme.id) return;
+                    currentTheme = theme; renderThemes(); 
+                    if (photos.length >= maxPhotos) {
+                        await reRenderResults();
+                    }
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        document.getElementById('btn-switch').onclick = () => { isFrontCamera = !isFrontCamera; initCamera(); };
+        document.getElementById('btn-flash').onclick = (e) => {
+            isFlashOn = !isFlashOn; e.currentTarget.classList.toggle('text-yellow-400'); e.currentTarget.classList.toggle('text-white');
+        };
+
+        togglePhoto.onclick = () => {
+            previewCanvas.classList.remove('hidden'); videoWrapper.classList.add('hidden');
+            btnDownloadPhoto.classList.remove('hidden'); btnDownloadPhoto.classList.add('flex');
+            btnDownloadVideo.classList.remove('flex'); btnDownloadVideo.classList.add('hidden');
+            togglePhoto.className = "flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold transition-colors";
+            toggleVideo.className = "flex-1 bg-transparent text-gray-400 hover:text-white py-2 rounded-lg text-sm font-bold transition-colors";
+        };
+
+        toggleVideo.onclick = () => {
+            videoWrapper.classList.remove('hidden'); previewCanvas.classList.add('hidden');
+            btnDownloadVideo.classList.remove('hidden'); btnDownloadVideo.classList.add('flex');
+            btnDownloadPhoto.classList.remove('flex'); btnDownloadPhoto.classList.add('hidden');
+            toggleVideo.className = "flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold transition-colors";
+            togglePhoto.className = "flex-1 bg-transparent text-gray-400 hover:text-white py-2 rounded-lg text-sm font-bold transition-colors";
+        };
+
+        async function setTorchStatus(isOn) {
+            if (videoTrack) { try { const cap = videoTrack.getCapabilities(); if (cap.torch) await videoTrack.applyConstraints({ advanced: [{ torch: isOn }] }); } catch (e) {} }
+        }
+
+        async function runCountdown() {
+            countdownDisplay.classList.remove('hidden');
+            for (let i = 3; i > 0; i--) {
+                countdownDisplay.innerText = i; countdownDisplay.classList.remove('countdown-anim'); void countdownDisplay.offsetWidth; countdownDisplay.classList.add('countdown-anim');
+                await new Promise(r => setTimeout(r, 1000));
+            }
+            countdownDisplay.classList.add('hidden');
+        }
+
+        async function captureSingleLogic() {
+            await runCountdown();
+            isRecording = true;
+            btnCapture.style.opacity = '0.5'; btnCapture.style.transform = 'scale(0.9)';
+            instructionText.innerHTML = "<span class='text-red-400 font-bold'>Tahan Pose! Merekam Action...</span>";
+            
+            if (isFlashOn) { setTorchStatus(true); flashEffect.classList.add('flash-active'); setTimeout(() => flashEffect.classList.remove('flash-active'), 200); }
+
+            const tempCanvas = document.createElement('canvas'); tempCanvas.width = videoElement.videoWidth; tempCanvas.height = videoElement.videoHeight;
+            const ctx = tempCanvas.getContext('2d', { alpha: false }); 
+            if (isFrontCamera) { ctx.translate(tempCanvas.width, 0); ctx.scale(-1, 1); }
+            ctx.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
+            photos.push(tempCanvas.toDataURL('image/jpeg', 0.9));
+
+            currentPhotoIndex++; counterText.innerText = `Grid: ${currentPhotoIndex} / ${maxPhotos}`;
+            recordingIndicator.classList.remove('hidden');
+
+            recordedChunks = [];
+            
+            // Prioritaskan MP4 jika browser mendukungnya, jika tidak fallback ke WebM
+            let mimeTypes = [
+                'video/mp4;codecs=h264',
+                'video/mp4;codecs=avc1',
+                'video/mp4',
+                'video/webm;codecs=h264',
+                'video/webm;codecs=vp9',
+                'video/webm;codecs=vp8',
+                'video/webm'
+            ];
+            let mimeType = mimeTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
+            
+            let options = {};
+            if (mimeType) {
+                options = { mimeType: mimeType, videoBitsPerSecond: 1500000 };
+            }
+            
+            try {
+                mediaRecorder = new MediaRecorder(currentStream, options);
+            } catch (e) {
+                mediaRecorder = new MediaRecorder(currentStream); 
+            }
+            
+            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+
+            return new Promise(resolve => {
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || mimeType || 'video/webm' }); 
+                    videoBlobs.push(URL.createObjectURL(blob));
+                    isRecording = false; if (isFlashOn) setTorchStatus(false);
+                    btnCapture.style.opacity = '1'; btnCapture.style.transform = 'scale(1)';
+                    instructionText.innerHTML = "Pilih mode lalu jepret.<br>Rekam 3s &rarr; Proses Rendering Cepat";
+                    recordingIndicator.classList.add('hidden');
+                    resolve();
+                };
+                mediaRecorder.start();
+                setTimeout(() => { if(mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 3000); 
+            });
+        }
+
+        btnCapture.onclick = async () => {
+            if (isProcessingCapture || currentPhotoIndex >= maxPhotos) return;
+            isProcessingCapture = true;
+            if (isAutoMode) { while (currentPhotoIndex < maxPhotos) await captureSingleLogic(); } else { await captureSingleLogic(); }
+            isProcessingCapture = false;
+            
+            if (currentPhotoIndex >= maxPhotos) {
+                document.getElementById('view-camera').classList.add('hidden');
+                document.getElementById('view-result').classList.remove('hidden');
+                reRenderResults();
+            }
+        };
+
+        const layout = { fW: 1080, fH: 1620, paddingX: 90, paddingTop: 100, paddingBottom: 210, gapX: 40, gapY: 40, cW: 430, cH: 410 };
+
+        function safeRoundRect(ctx, x, y, w, h, r) {
+            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); } else { ctx.beginPath(); ctx.rect(x, y, w, h); }
+        }
+        function applyClip(ctx, id, x, y, w, h) {
+            if (['bluepink','love','cartoon','ig','social','nemo','upinipin','minion','netflix'].includes(id)) { safeRoundRect(ctx, x, y, w, h, 20); } else { ctx.beginPath(); ctx.rect(x, y, w, h); }
+            ctx.clip();
+        }
+
+        function drawBackgroundAndFooter(ctx, id, w, h) {
+            ctx.clearRect(0, 0, w, h);
+            if (id === 'wood') {
+                const grad = ctx.createLinearGradient(0, 0, w, h); grad.addColorStop(0, '#5C4033'); grad.addColorStop(1, '#3E2723'); ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#81C784'; ctx.globalAlpha = 0.6;
+                for(let i=0; i<w; i+=120) { ctx.beginPath(); ctx.arc(i, 20, 60, 0, Math.PI); ctx.fill(); ctx.beginPath(); ctx.arc(i+50, h-20, 80, Math.PI, Math.PI*2); ctx.fill(); }
+                ctx.globalAlpha = 1.0;
+            } else if (id === 'bluepink') {
+                ctx.fillStyle = '#FF9CEE'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#A3E4D7';
+                for(let r=0; r<h; r+=80) for(let c=0; c<w; c+=80) if((r/80 + c/80) % 2 === 0) ctx.fillRect(c, r, 80, 80);
+                ctx.fillStyle = '#FFF200'; const stars = [[120,120], [w-100, 250], [150, h-150], [w-150, h-300]];
+                stars.forEach(pos => { ctx.beginPath(); for(let i=0; i<5; i++) { ctx.lineTo(pos[0] + 40*Math.cos(18+i*72*Math.PI/180), pos[1] - 40*Math.sin(18+i*72*Math.PI/180)); ctx.lineTo(pos[0] + 15*Math.cos(54+i*72*Math.PI/180), pos[1] - 15*Math.sin(54+i*72*Math.PI/180)); } ctx.closePath(); ctx.fill(); });
+            } else if (id === 'spotify') {
+                ctx.fillStyle = '#121212'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#1DB954';
+                for(let i = 0; i < w; i += 25) { let waveH = 20 + Math.sin(i*0.05)*25 + Math.cos(i*0.02)*15; ctx.fillRect(i, h-110-waveH/2, 12, waveH); }
+                ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 32px Sans-Serif'; ctx.fillText('⚡ Live Session Tracks', 90, h - 50);
+            } else if (id === 'polaroid') {
+                ctx.fillStyle = '#E6E6FA'; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; ctx.save(); ctx.translate(150, 60); ctx.rotate(-10*Math.PI/180); ctx.fillRect(-70, -20, 140, 40); ctx.restore();
+                ctx.fillStyle = '#FF69B4'; ctx.font = '50px Arial'; ctx.fillText('💖', 80, h-100); ctx.fillText('🌸', w-120, 120);
+            } else if (id === 'film') {
+                const grad = ctx.createLinearGradient(0, 0, w, h); grad.addColorStop(0, '#0a0a0a'); grad.addColorStop(0.5, '#222'); grad.addColorStop(1, '#0a0a0a'); ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#fff'; for(let i=20; i<h; i+=80) { safeRoundRect(ctx, 20, i, 30, 40, 8); ctx.fill(); safeRoundRect(ctx, w-50, i, 30, 40, 8); ctx.fill(); }
+            } else if (id === 'cyberpunk') {
+                ctx.fillStyle = '#070710'; ctx.fillRect(0, 0, w, h); ctx.lineWidth = 2;
+                for(let i=0; i<w; i+=80) { ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)'; ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
+                ctx.strokeStyle = '#0F0'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(w/2, h/2, 300, 0, Math.PI*2); ctx.stroke();
+            } else if (id === 'love') {
+                ctx.fillStyle = '#FFE4E1'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#FF69B4'; ctx.font = '45px Arial';
+                for(let i=0; i<w; i+=120) for(let j=0; j<h; j+=120) ctx.fillText((i+j)%3===0?'❤️':(i+j)%3===1?'💕':'💖', i+20, j+40);
+            } else if (id === 'hero') {
+                for(let i=0; i<360; i+=15) { ctx.beginPath(); ctx.moveTo(w/2, h/2); ctx.arc(w/2, h/2, 1500, i*Math.PI/180, (i+7.5)*Math.PI/180); ctx.fillStyle = (i%30===0) ? '#E23636' : '#F5D300'; ctx.fill(); }
+                ctx.fillStyle = '#FFF'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.font = 'bold 90px Impact'; ctx.fillText('BOOM!', 80, h-80); ctx.strokeText('BOOM!', 80, h-80);
+            } else if (id === 'cartoon') {
+                ctx.fillStyle = '#87CEEB'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#FFF';
+                for(let i=30; i<w; i+=250) for(let j=60; j<h; j+=350) { ctx.beginPath(); ctx.arc(i, j, 50, 0, Math.PI*2); ctx.arc(i+40, j-30, 60, 0, Math.PI*2); ctx.arc(i+90, j, 50, 0, Math.PI*2); ctx.fill(); }
+                ctx.fillStyle = '#FAD7A1'; ctx.fillRect(0, h-150, w, 150);
+            } else if (id === 'ig') {
+                const grad = ctx.createLinearGradient(0, h, w, 0); grad.addColorStop(0, '#f09433'); grad.addColorStop(0.25, '#e6683c'); grad.addColorStop(0.5, '#dc2743'); grad.addColorStop(1, '#bc1888'); ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#FFF'; ctx.font = '60px Arial'; ctx.fillText('✨', 80, 120); ctx.fillText('📸', w-140, h-80);
+            } else if (id === 'social') {
+                ctx.fillStyle = '#E9EBEE'; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#25D366'; safeRoundRect(ctx, 60, h-130, 280, 70, 35); ctx.fill();
+                ctx.fillStyle = '#FFF'; ctx.font = 'bold 28px Arial'; ctx.fillText('💬 Mengetik...', 90, h-85);
+            } else if (id === 'nemo') {
+                const grad = ctx.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, '#006994'); grad.addColorStop(1, '#001a33'); ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = 'rgba(255,255,255,0.2)'; for(let i=0; i<30; i++) { ctx.beginPath(); ctx.arc(Math.random()*w, Math.random()*h, Math.random()*15+5, 0, Math.PI*2); ctx.fill(); }
+            } else if (id === 'upinipin') {
+                ctx.fillStyle = '#87CEEB'; ctx.fillRect(0,0,w,h*0.7); ctx.fillStyle = '#32CD32'; ctx.fillRect(0,h*0.7,w,h*0.3);
+                ctx.fillStyle = '#FFF'; ctx.font = '60px Arial'; ctx.fillText('☁️', 100, 150); ctx.fillText('☁️', w-200, 250);
+            } else if (id === 'minion') {
+                ctx.fillStyle = '#FCE029'; ctx.fillRect(0,0,w,h); ctx.fillStyle = '#3b5998'; ctx.fillRect(0,h-150,w,150);
+                ctx.font = '80px Arial'; ctx.fillText('🍌', w/2-40, h-50);
+            } else if (id === 'tiktok') {
+                ctx.fillStyle = '#050505'; ctx.fillRect(0,0,w,h); ctx.font = '50px Arial';
+                for(let i=0;i<10;i++) { ctx.fillStyle=i%2===0?'#00f2fe':'#fe0979'; ctx.fillText('🎵', Math.random()*w, Math.random()*h); }
+            } else if (id === 'netflix') {
+                const grad = ctx.createRadialGradient(w/2, h/2, 100, w/2, h/2, 900); grad.addColorStop(0, '#333'); grad.addColorStop(1, '#000'); ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = '#E50914'; ctx.font = 'bold 50px Arial'; ctx.fillText('CHILL', w/2-70, h-80);
+            }
+        }
+
+        function drawFrameBase(ctx, id, x, y, w, h) {
+            ctx.save();
+            if (id === 'hero') { ctx.fillStyle = '#000'; ctx.fillRect(x-8, y-8, w+16, h+16); ctx.fillStyle = '#FFF'; ctx.fillRect(x, y, w, h); }
+            else if (id === 'polaroid') { ctx.fillStyle = '#fff'; ctx.fillRect(x-15, y-15, w+30, h+70); }
+            else if (id === 'social') { ctx.fillStyle = '#FFF'; safeRoundRect(ctx, x-15, y-15, w+30, h+80, 15); ctx.fill(); }
+            ctx.restore();
+        }
+
+        function drawFrameOverlay(ctx, id, x, y, w, h) {
+            ctx.save();
+            if (id === 'polaroid') { ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 2; ctx.strokeRect(x-15, y-15, w+30, h+70); }
+            else if (id === 'wood') { ctx.strokeStyle = '#D7CCC8'; ctx.lineWidth = 15; ctx.strokeRect(x, y, w, h); }
+            else if (id === 'bluepink') { ctx.lineWidth = 12; ctx.strokeStyle = '#FFF'; safeRoundRect(ctx, x, y, w, h, 20); ctx.stroke(); }
+            else if (id === 'spotify') { ctx.strokeStyle = '#1DB954'; ctx.lineWidth = 8; ctx.strokeRect(x, y, w, h); }
+            else if (id === 'cyberpunk') { ctx.strokeStyle = '#0FF'; ctx.lineWidth = 5; ctx.strokeRect(x, y, w, h); ctx.fillStyle = '#F0F'; ctx.fillRect(x-10, y-10, 30, 10); ctx.fillRect(x-10, y-10, 10, 30); ctx.fillRect(x+w-20, y+h, 30, 10); ctx.fillRect(x+w, y+h-20, 10, 30); }
+            else if (id === 'love') { ctx.strokeStyle = '#FF1493'; ctx.lineWidth = 12; safeRoundRect(ctx, x, y, w, h, 20); ctx.stroke(); ctx.fillStyle = '#FFF'; ctx.font = '45px Arial'; ctx.fillText('💕', x-25, y+30); }
+            else if (id === 'hero') { ctx.strokeStyle = '#000'; ctx.lineWidth = 5; ctx.strokeRect(x, y, w, h); }
+            else if (id === 'cartoon') { ctx.strokeStyle = '#FFF'; ctx.lineWidth = 20; safeRoundRect(ctx, x, y, w, h, 20); ctx.stroke(); ctx.strokeStyle = '#333'; ctx.lineWidth = 6; safeRoundRect(ctx, x-10, y-10, w+20, h+20, 25); ctx.stroke(); }
+            else if (id === 'ig') { ctx.strokeStyle = '#FFF'; ctx.lineWidth = 14; ctx.shadowColor = "rgba(0,0,0,0.3)"; ctx.shadowBlur = 15; safeRoundRect(ctx, x, y, w, h, 20); ctx.stroke(); }
+            else if (id === 'social') { ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 2; safeRoundRect(ctx, x-15, y-15, w+30, h+80, 15); ctx.stroke(); ctx.fillStyle = '#1877F2'; ctx.beginPath(); ctx.arc(x+30, y+h+30, 22, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#333'; ctx.font = 'bold 24px Sans-Serif'; ctx.fillText('MyStory_99', x+65, y+h+38); }
+            else if (id === 'nemo') { ctx.strokeStyle = '#FF7F50'; ctx.lineWidth = 14; safeRoundRect(ctx, x, y, w, h, 20); ctx.stroke(); ctx.strokeStyle = '#FFF'; ctx.lineWidth = 4; safeRoundRect(ctx, x-7, y-7, w+14, h+14, 25); ctx.stroke(); ctx.font = '40px Arial'; ctx.fillText('🐠', x-15, y+20); ctx.fillText('🐡', x+w-25, y+h+15); }
+            else if (id === 'upinipin') { ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 12; safeRoundRect(ctx, x, y, w, h, 20); ctx.stroke(); ctx.font = '45px Arial'; ctx.fillText('👦👦', x-20, y+30); ctx.fillText('🐓', x+w-30, y+h+15); }
+            else if (id === 'minion') { ctx.strokeStyle = '#3b5998'; ctx.lineWidth = 15; safeRoundRect(ctx, x, y, w, h, 20); ctx.stroke(); ctx.font = '45px Arial'; ctx.fillText('👓', x-20, y+25); }
+            else if (id === 'tiktok') { ctx.strokeStyle = '#00f2fe'; ctx.lineWidth = 6; ctx.strokeRect(x-4, y-4, w, h); ctx.strokeStyle = '#fe0979'; ctx.lineWidth = 6; ctx.strokeRect(x+4, y+4, w, h); ctx.strokeStyle = '#FFF'; ctx.lineWidth = 4; ctx.strokeRect(x, y, w, h); }
+            else if (id === 'netflix') { ctx.strokeStyle = '#E50914'; ctx.lineWidth = 8; safeRoundRect(ctx, x, y, w, h, 20); ctx.stroke(); ctx.fillStyle = '#FFF'; ctx.fillRect(x+w/2-25, y-10, 50, 20); }
+            ctx.restore();
+        }
+
+        async function generatePhotoGrid() {
+            const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d', { alpha: false });
+            canvas.width = layout.fW; canvas.height = layout.fH; previewCanvas.width = layout.fW; previewCanvas.height = layout.fH;
+            
+            drawBackgroundAndFooter(ctx, currentTheme.id, layout.fW, layout.fH);
+            for (let i = 0; i < photos.length; i++) {
+                const x = layout.paddingX + (i%2) * (layout.cW + layout.gapX), y = layout.paddingTop + Math.floor(i/2) * (layout.cH + layout.gapY);
+                drawFrameBase(ctx, currentTheme.id, x, y, layout.cW, layout.cH);
+            }
+            
+            for (let i = 0; i < photos.length; i++) {
+                const img = new Image(); img.src = photos[i]; await new Promise(res => { img.onload = res; });
+                const x = layout.paddingX + (i%2) * (layout.cW + layout.gapX), y = layout.paddingTop + Math.floor(i/2) * (layout.cH + layout.gapY);
+                const ratio = Math.max(layout.cW/img.width, layout.cH/img.height), dw = img.width*ratio, dh = img.height*ratio;
+                
+                ctx.save(); applyClip(ctx, currentTheme.id, x, y, layout.cW, layout.cH);
+                ctx.drawImage(img, x + (layout.cW-dw)/2, y + (layout.cH-dh)/2, dw, dh);
+                ctx.restore();
+                drawFrameOverlay(ctx, currentTheme.id, x, y, layout.cW, layout.cH);
+            }
+            
+            previewCanvas.getContext('2d').drawImage(canvas, 0, 0);
+            
+            document.getElementById('btn-download-photo').onclick = async () => { 
+                const btn = document.getElementById('btn-download-photo');
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                btn.disabled = true;
+
+                try {
+                    const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+                    const blob = base64ToBlob(dataUrl, 'image/jpeg');
+                    triggerFileDownload(blob, `StudioPro_Strip_${Date.now()}.jpg`);
+                    
+                    btn.innerHTML = '<i class="fas fa-check-circle"></i> Berhasil Disimpan!';
+                    btn.classList.replace('bg-blue-600', 'bg-green-600');
+                    btn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = '<i class="fas fa-image"></i> Simpan Strip Foto <span class="text-green-300 ml-1 text-xs">✓</span>';
+                        btn.classList.replace('bg-green-600', 'bg-blue-600');
+                        btn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+                    }, 3000);
+                } catch(e) { console.error("Download Error:", e); alert("Gagal menyimpan. Coba lagi."); }
+                
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                btn.disabled = false;
+            };
+        }
+
+        function renderIndividualPhotos() {
+            const container = document.getElementById('individual-photos-container');
+            container.innerHTML = '';
+            selectedIndividualPhotos.clear();
+            updateSelectedCountUI();
+
+            photos.forEach((photoDataUrl, index) => {
+                const imgWrap = document.createElement('div');
+                imgWrap.className = 'photo-select-wrap relative aspect-[2/3] rounded-lg overflow-hidden border-2 border-transparent cursor-pointer bg-gray-900 transition-all shadow-md';
+                imgWrap.onclick = () => togglePhotoSelection(index, imgWrap);
+
+                const img = document.createElement('img');
+                img.src = photoDataUrl;
+                img.className = 'w-full h-full object-cover';
+
+                const check = document.createElement('div');
+                check.className = 'check-icon absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-[10px] font-bold shadow-md z-20';
+                check.innerHTML = '<i class="fas fa-check"></i>';
+                
+                const badge = document.createElement('div');
+                badge.id = `badge-dl-${index}`;
+                badge.className = 'downloaded-badge hidden absolute bottom-1 right-1 bg-green-500 text-white text-[9px] px-1.5 py-0.5 rounded-md shadow-md font-bold z-10';
+                badge.innerHTML = '<i class="fas fa-check"></i> Tersimpan';
+
+                imgWrap.appendChild(img);
+                imgWrap.appendChild(check);
+                imgWrap.appendChild(badge);
+                container.appendChild(imgWrap);
+            });
+        }
+
+        function togglePhotoSelection(index, element) {
+            if (selectedIndividualPhotos.has(index)) {
+                selectedIndividualPhotos.delete(index);
+                element.classList.remove('selected');
+            } else {
+                selectedIndividualPhotos.add(index);
+                element.classList.add('selected');
+            }
+            updateSelectedCountUI();
+        }
+
+        function updateSelectedCountUI() {
+            const count = selectedIndividualPhotos.size;
+            document.getElementById('selected-count').innerText = count;
+            const btn = document.getElementById('btn-download-selected');
+            if (count > 0) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        document.getElementById('btn-download-selected').onclick = async () => {
+            if (selectedIndividualPhotos.size === 0) return;
+            const btn = document.getElementById('btn-download-selected');
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengunduh...';
+            btn.classList.add('opacity-75', 'cursor-wait');
+            btn.disabled = true;
+
+            const selectedArray = Array.from(selectedIndividualPhotos);
+
+            for (let i = 0; i < selectedArray.length; i++) {
+                const index = selectedArray[i];
+                try {
+                    const blob = base64ToBlob(photos[index], 'image/jpeg');
+                    triggerFileDownload(blob, `StudioPro_FotoSatuan_${index + 1}_${Date.now()}.jpg`);
+                    
+                    document.getElementById(`badge-dl-${index}`).classList.remove('hidden');
+
+                    // PERUBAHAN: Jeda diturunkan dari 800ms menjadi 150ms agar langsung selesai hampir bersamaan
+                    if (i < selectedArray.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 150));
+                    }
+                } catch (e) { console.error(`Gagal mengunduh foto ke-${index + 1}:`, e); }
+            }
+
+            btn.innerHTML = '<i class="fas fa-check-double"></i> Berhasil Diunduh!';
+            btn.classList.replace('bg-purple-600', 'bg-green-600');
+            btn.classList.replace('hover:bg-purple-700', 'hover:bg-green-700');
+            
+            setTimeout(() => {
+                btn.innerHTML = `<i class="fas fa-download"></i> Unduh Terpilih (<span id="selected-count">${selectedIndividualPhotos.size}</span>) <span class="text-green-300 ml-1 text-xs">✓</span>`;
+                btn.classList.replace('bg-green-600', 'bg-purple-600');
+                btn.classList.replace('hover:bg-green-700', 'hover:bg-purple-700');
+            }, 3000);
+
+            btn.classList.remove('opacity-75', 'cursor-wait');
+            btn.disabled = false;
+        };
+
+        async function generateVideoGridBackground() {
+            isVideoReady = false;
+            btnDownloadVideo.classList.remove('flex'); btnDownloadVideo.classList.add('hidden');
+            
+            currentRenderId++;
+            const renderId = currentRenderId;
+            
+            const gridCanvas = document.createElement('canvas'); 
+            gridCanvas.width = layout.fW; gridCanvas.height = layout.fH;
+            const gCtx = gridCanvas.getContext('2d', { alpha: false }); 
+            
+            const bgCache = document.createElement('canvas'), overlayCache = document.createElement('canvas');
+            bgCache.width = layout.fW; bgCache.height = layout.fH; overlayCache.width = layout.fW; overlayCache.height = layout.fH;
+            
+            const bCtx = bgCache.getContext('2d', { alpha: false }), oCtx = overlayCache.getContext('2d'); 
+            drawBackgroundAndFooter(bCtx, currentTheme.id, layout.fW, layout.fH);
+            
+            const coords = [];
+            for (let i = 0; i < maxPhotos; i++) {
+                const x = layout.paddingX + (i%2) * (layout.cW + layout.gapX), y = layout.paddingTop + Math.floor(i/2) * (layout.cH + layout.gapY);
+                coords.push({x, y});
+                drawFrameBase(bCtx, currentTheme.id, x, y, layout.cW, layout.cH);
+                drawFrameOverlay(oCtx, currentTheme.id, x, y, layout.cW, layout.cH);
+            }
+
+            domVideoElements.forEach(v => v.remove()); 
+            domVideoElements = [];
+            
+            const videoElements = [];
+            const loadPromises = []; // PERUBAHAN: Penampung promise agar video siap bersamaan
+            
+            for (let i = 0; i < videoBlobs.length; i++) {
+                const v = document.createElement('video'); 
+                v.src = videoBlobs[i]; 
+                
+                v.setAttribute('playsinline', '');
+                v.setAttribute('muted', '');
+                v.muted = true; v.loop = true; v.playsInline = true;
+                v.playbackRate = 0.8;
+                
+                v.style.position = 'fixed'; v.style.top = '0px'; v.style.left = '0px'; 
+                v.style.width = '2px'; v.style.height = '2px'; 
+                v.style.opacity = '0.01'; v.style.pointerEvents = 'none'; v.style.zIndex = '-1';
+                v.preload = "auto";
+                
+                document.body.appendChild(v);
+                domVideoElements.push(v);
+                videoElements.push(v);
+                
+                // PERUBAHAN: Menahan video agar tidak langsung play, menunggu yang lain
+                loadPromises.push(new Promise(resolve => {
+                    v.oncanplay = resolve;
+                    v.onloadeddata = resolve;
+                    // Fallback waktu jika ada masalah loading
+                    setTimeout(resolve, 1500); 
+                }));
+            }
+
+            // PERUBAHAN: Tunggu semua video siap agar munculnya tidak satu-satu
+            await Promise.all(loadPromises);
+
+            if (renderId !== currentRenderId) return;
+
+            // PERUBAHAN: Memutar semua video secara serentak
+            videoElements.forEach(v => {
+                v.play().catch(()=>{});
+            });
+
+            gCtx.drawImage(bgCache, 0, 0); 
+            
+            gridCanvas.id = 'grid-canvas-fallback';
+            gridCanvas.className = "w-full bg-black rounded-xl shadow-2xl object-contain border-4 border-gray-800";
+            gridCanvas.style.aspectRatio = "2/3";
+            gridCanvas.style.display = 'block';
+            
+            const oldFallback = document.getElementById('grid-canvas-fallback');
+            if (oldFallback) oldFallback.remove();
+            
+            videoWrapper.insertBefore(gridCanvas, videoLoadingState);
+            previewVideo.style.display = 'none'; 
+
+            isVideoReady = true;
+            videoLoadingState.classList.add('hidden');
+            if (!videoWrapper.classList.contains('hidden')) {
+                btnDownloadVideo.classList.remove('hidden'); btnDownloadVideo.classList.add('flex');
+            }
+
+            let canvasStream = null;
+            try {
+                if (gridCanvas.captureStream) canvasStream = gridCanvas.captureStream(30);
+                else if (gridCanvas.mozCaptureStream) canvasStream = gridCanvas.mozCaptureStream(30);
+                else if (gridCanvas.webkitCaptureStream) canvasStream = gridCanvas.webkitCaptureStream(30);
+            } catch (err) {
+                console.warn("Dukungan captureStream sangat terbatas di device ini.");
+            }
+
+            btnDownloadVideo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan Unduhan...';
+            btnDownloadVideo.classList.add('opacity-75', 'cursor-wait');
+            
+            // PERUBAHAN: Peringatan disesuaikan karena render sekarang lebih cepat
+            btnDownloadVideo.onclick = (e) => { e.preventDefault(); alert("Sedang menyiapkan video Anda, harap tunggu sebentar..."); };
+
+            let gridRecorder = null;
+            if (canvasStream) {
+                try {
+                    // Prioritaskan format rekaman MP4 yang kompatibel, lalu fallback
+                    let types = [
+                        'video/mp4;codecs=h264',
+                        'video/mp4;codecs=avc1',
+                        'video/mp4',
+                        'video/webm;codecs=h264',
+                        'video/webm;codecs=vp9',
+                        'video/webm;codecs=vp8',
+                        'video/webm'
+                    ];
+                    let mimeType = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+                    
+                    let options = { videoBitsPerSecond: 3000000 };
+                    if (mimeType) options.mimeType = mimeType;
+                    
+                    gridRecorder = new MediaRecorder(canvasStream, options);
+                    
+                    const gridChunks = []; 
+                    gridRecorder.ondataavailable = (e) => { if (e.data.size > 0) gridChunks.push(e.data); };
+
+                    gridRecorder.onstop = () => {
+                        if (renderId !== currentRenderId) return;
+                        
+                        // Deteksi ekstensi file murni dari format mime yang berhasil direkam 
+                        // Menghindari file "webm" yang korup karena dipaksa dinamai ".mp4"
+                        const finalMimeType = gridRecorder.mimeType || mimeType || 'video/webm';
+                        const extension = finalMimeType.indexOf('mp4') > -1 ? 'mp4' : 'webm';
+                        const blob = new Blob(gridChunks, { type: finalMimeType });
+                        
+                        if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
+                        currentVideoUrl = URL.createObjectURL(blob);
+                        
+                        btnDownloadVideo.innerHTML = '<i class="fas fa-video"></i> Simpan Video Slow-Mo';
+                        btnDownloadVideo.classList.remove('opacity-75', 'cursor-wait');
+                        
+                        btnDownloadVideo.onclick = () => { 
+                            triggerFileDownload(blob, `StudioPro_Video_${Date.now()}.${extension}`);
+                            
+                            btnDownloadVideo.innerHTML = '<i class="fas fa-check-circle"></i> Video Tersimpan!';
+                            btnDownloadVideo.classList.replace('bg-emerald-600', 'bg-green-600');
+                            btnDownloadVideo.classList.replace('hover:bg-emerald-700', 'hover:bg-green-700');
+                            
+                            setTimeout(() => {
+                                btnDownloadVideo.innerHTML = '<i class="fas fa-video"></i> Simpan Video Slow-Mo <span class="text-green-300 ml-1 text-xs">✓</span>';
+                                btnDownloadVideo.classList.replace('bg-green-600', 'bg-emerald-600');
+                                btnDownloadVideo.classList.replace('hover:bg-green-700', 'hover:bg-emerald-700');
+                            }, 3000);
+                        };
+                    };
+                } catch (e) {
+                    console.warn("MediaRecorder Record Grid Error", e);
+                }
+            } else {
+                btnDownloadVideo.innerHTML = '<i class="fas fa-video-slash"></i> Perangkat Tidak Mendukung';
+                btnDownloadVideo.classList.remove('opacity-75', 'cursor-wait');
+                btnDownloadVideo.onclick = () => alert("Penyimpanan video live tidak di dukung pada versi browser/OS ini. Silakan gunakan Chrome/Safari terbaru, atau nikmati Live Preview secara visual.");
+            }
+
+            let isDrawing = true;
+            function drawVideoFrame() {
+                if (!isDrawing || renderId !== currentRenderId) return;
+                
+                gCtx.drawImage(bgCache, 0, 0); 
+                
+                for (let i = 0; i < videoElements.length; i++) {
+                    const v = videoElements[i], c = coords[i];
+                    if (v.videoWidth === 0 || v.readyState < 2) continue; 
+                    
+                    gCtx.save(); 
+                    applyClip(gCtx, currentTheme.id, c.x, c.y, layout.cW, layout.cH);
+                    
+                    const ratio = Math.max(layout.cW / v.videoWidth, layout.cH / v.videoHeight);
+                    const dw = v.videoWidth * ratio;
+                    const dh = v.videoHeight * ratio;
+                    
+                    gCtx.translate(c.x + layout.cW / 2, c.y + layout.cH / 2);
+                    if (isFrontCamera) { gCtx.scale(-1, 1); }
+                    gCtx.drawImage(v, -dw / 2, -dh / 2, dw, dh);
+                    gCtx.restore();
+                }
+                
+                gCtx.drawImage(overlayCache, 0, 0);
+                requestAnimationFrame(drawVideoFrame);
+            }
+            
+            drawVideoFrame(); 
+
+            setTimeout(() => {
+                if (renderId === currentRenderId && gridRecorder && gridRecorder.state === 'inactive') {
+                    try {
+                        gridRecorder.start();
+                        // PERUBAHAN: Durasi media recorder diturunkan menjadi 5 detik saja 
+                        // karena durasi video aslinya hanya 3-4 detik. Hal ini membuat opsi download instan siap lebih cepat tanpa menghilangkan proses perekamannya.
+                        setTimeout(() => { 
+                            if(gridRecorder && gridRecorder.state === 'recording') gridRecorder.stop(); 
+                        }, 5000); 
+                    } catch (e) {
+                        console.error("Recording start error:", e);
+                    }
+                }
+            }, 500); // Waktu inisiasi perekaman dipercepat sedikit
+        }
+
+        async function reRenderResults() {
+            if (isRendering) return;
+            isRendering = true;
+            themeContainer.classList.add('opacity-50', 'pointer-events-none');
+            document.getElementById('final-state').classList.add('hidden'); document.getElementById('final-state').classList.remove('flex');
+            
+            await generatePhotoGrid();
+            renderIndividualPhotos(); 
+            
+            document.getElementById('final-state').classList.remove('hidden'); document.getElementById('final-state').classList.add('flex');
+            togglePhoto.click(); 
+            
+            themeContainer.classList.remove('opacity-50', 'pointer-events-none');
+            isRendering = false;
+            
+            await generateVideoGridBackground(); // Menunggu proses generate agar rapi
+        }
+
+        document.getElementById('btn-restart').onclick = async () => {
+            currentRenderId++; 
+            photos = []; videoBlobs.forEach(b => URL.revokeObjectURL(b)); videoBlobs = [];
+            selectedIndividualPhotos.clear(); updateSelectedCountUI(); 
+            domVideoElements.forEach(v => v.remove()); domVideoElements = [];
+            
+            if (currentVideoUrl) { URL.revokeObjectURL(currentVideoUrl); currentVideoUrl = null; }
+            previewVideo.pause(); 
+            previewVideo.srcObject = null; 
+            previewVideo.removeAttribute('src'); 
+            previewVideo.load();
+            currentPhotoIndex = 0; counterText.innerText = `Grid: 0 / ${maxPhotos}`;
+            
+            document.getElementById('view-result').classList.add('hidden');
+            document.getElementById('final-state').classList.add('hidden'); document.getElementById('final-state').classList.remove('flex');
+            document.getElementById('view-camera').classList.remove('hidden');
+            await initCamera();
+        };
+
+        window.onload = () => { renderThemes(); };
+    </script>
+</body>
+</html>
